@@ -2,7 +2,7 @@
 import { onMounted, ref, reactive, nextTick } from 'vue'
 import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import type { FormRules, FormInstance } from 'element-plus'
-import { getRailcompanyList, type RailcompanyItem, type RailcompanyResponse } from '@/api/Railcompany'
+import { getRailcompanyList, addRailcompanyApi, editRailcompanyApi, patchRailcompanyValidApi, type RailcompanyItem, type RailcompanyResponse } from '@/api/Railcompany'
 
 onMounted(() => {
   getTableList()
@@ -15,6 +15,7 @@ const form = ref({
 })
 
 const loading = ref(false)
+const submitLoading = ref(false)
 
 const getTableList = async () => {
   try {
@@ -63,6 +64,22 @@ const tableData = ref<RailcompanyItem[]>([])
 // 添加
 const add = () => {
   titleDialog.value = 'New RailCompany'
+  ruleForm.value = {
+    id: 0,
+    railroadCode: '',
+    railroadNameEn: '',
+    railroadNameCn: '',
+    partnerCarriers: '',
+    description: '',
+    isValid: 1,
+    createTime: '',
+    updateTime: '',
+    createUser: '',
+    updateUser: ''
+  }
+  nextTick(() => {
+    ruleFormRef.value?.clearValidate()
+  })
   visibleDialog.value = true
 }
 
@@ -129,24 +146,56 @@ const submitForm = async (formEl: FormInstance | undefined) => {
   if (!formEl) return
   await formEl.validate((valid, fields) => {
     if (valid) {
-      let formCopy = JSON.parse(JSON.stringify(ruleForm.value))
+      const formCopy = {
+        id: ruleForm.value.id,
+        railroadCode: ruleForm.value.railroadCode,
+        railroadNameEn: ruleForm.value.railroadNameEn,
+        railroadNameCn: ruleForm.value.railroadNameCn,
+        partnerCarriers: ruleForm.value.partnerCarriers,
+        description: ruleForm.value.description,
+        isValid: ruleForm.value.isValid
+      }
       if (titleDialog.value === 'New RailCompany') {
         delete formCopy.id
-        // 这里应该调用创建API
-        ElMessage({
-          type: 'success',
-          message: `Success`,
+        submitLoading.value = true
+        addRailcompanyApi(formCopy).then((res) => {
+          if (res.code === 200) {
+            getTableList()
+            closeDialog()
+            ElMessage({
+              type: 'success',
+              message: 'Rail company added successfully',
+            })
+          }
+        }).catch((err) => {
+          console.error('Add failed:', err)
+          ElMessage({
+            type: 'error',
+            message: 'Failed to add rail company'
+          })
+        }).finally(() => {
+          submitLoading.value = false
         })
-        getTableList()
-        closeDialog()
       } else {
-        // 这里应该调用更新API
-        ElMessage({
-          type: 'success',
-          message: `Success`,
+        submitLoading.value = true
+        editRailcompanyApi(formCopy).then((res) => {
+          if (res.code === 200) {
+            getTableList()
+            closeDialog()
+            ElMessage({
+              type: 'success',
+              message: 'Rail company updated successfully',
+            })
+          }
+        }).catch((err) => {
+          console.error('Edit failed:', err)
+          ElMessage({
+            type: 'error',
+            message: 'Failed to edit rail company'
+          })
+        }).finally(() => {
+          submitLoading.value = false
         })
-        getTableList()
-        closeDialog()
       }
     } else {
       console.log('error submit!', fields)
@@ -157,8 +206,33 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 const closeDialog = () => {
   visibleDialog.value = false
   nextTick(() => {
-    ruleFormRef.value?.resetFields() // 清空字段并重置校验状态
+    ruleFormRef.value?.resetFields()
   })
+}
+
+// 状态切换
+const handleStatusChange = async (row: RailcompanyItem, newValue: number) => {
+  const originalValue = newValue === 1 ? 0 : 1
+  
+  ElMessageBox.confirm('Please confirm this operation', 'Warning', {
+    confirmButtonText: 'OK',
+    cancelButtonText: 'Cancel',
+    type: 'warning',
+  })
+    .then(async () => {
+      try {
+        await patchRailcompanyValidApi(row.id, newValue)
+        ElMessage({ type: 'success', message: 'Status updated successfully' })
+        getTableList()
+      } catch (error) {
+        row.isValid = originalValue
+        ElMessage({ type: 'error', message: 'Update failed' })
+      }
+    })
+    .catch(() => {
+      row.isValid = originalValue
+      ElMessage({ type: 'info', message: 'Operation cancelled' })
+    })
 }
 
 const htmlContent = ref(``)
@@ -214,7 +288,17 @@ const htmlContent = ref(``)
           show-overflow-tooltip
         />
 
-        <el-table-column prop="isValid" label="isValid" width="80" show-overflow-tooltip />
+        <!-- Status 开关列 -->
+        <el-table-column prop="isValid" label="Status" width="80">
+          <template #default="{ row }">
+            <el-switch
+              v-model="row.isValid"
+              :active-value="1"
+              :inactive-value="0"
+              @change="(val) => handleStatusChange(row, val)"
+            />
+          </template>
+        </el-table-column>
 
         <el-table-column label="" min-width="60">
           <template #default="{ row }">
@@ -327,18 +411,17 @@ const htmlContent = ref(``)
             />
           </el-form-item>
 
-          <el-row :gutter="24">
-            <el-col :span="12">
-              <el-form-item label="isValid">
-                <el-input placeholder="Enter isValid" v-model.number="ruleForm.isValid" />
-              </el-form-item>
-            </el-col>
-          </el-row>
+          <el-form-item label="Status" prop="isValid">
+            <el-radio-group v-model="ruleForm.isValid">
+              <el-radio :value="0" border>Invalid</el-radio>
+              <el-radio :value="1" border>Valid</el-radio>
+            </el-radio-group>
+          </el-form-item>
         </el-form>
       </div>
       <template #footer>
         <div class="w-full text-right">
-          <el-button type="primary" class="conBtn" @click="submitForm(ruleFormRef)">
+          <el-button type="primary" class="conBtn" @click="submitForm(ruleFormRef)" :loading="submitLoading">
             Confirm
           </el-button>
           <el-button class="closeBtn" @click="closeDialog">Close</el-button>

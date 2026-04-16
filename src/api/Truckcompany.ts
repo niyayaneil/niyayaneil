@@ -5,22 +5,17 @@ export const getTruckcompanyList = (params: TruckcompanySearchParams) => {
   return request<TruckcompanyResponse>('/mgr/truckCompanies/page', 'post', params)
 }
 
-export const createTruckcompany = (data: Omit<TruckcompanyItem, 'id' | 'createTime' | 'createUser' | 'updateTime' | 'updateUser'>) => {
-  return request<{ code: number; msg: string }>('/mgr/truckCompanies', 'post', data)
+// 新增
+export const addTruckcompanyApi = (data: TruckcompanyItem) => {
+  return request<TruckcompanyResponse>('/mgr/truckCompanies', 'post', data)
 }
 
-export const getTruckcompanyDetail = (id: number) => {
-  return request<TruckcompanyItem>(`/mgr/truckCompanies/${id}`, 'get')
+// 编辑
+export const editTruckcompanyApi = (data: TruckcompanyItem) => {
+  return request<TruckcompanyResponse>(`/mgr/truckCompanies/${data.id}`, 'put', data)
 }
 
-export const updateTruckcompany = (id: number, data: Omit<TruckcompanyItem, 'id' | 'createTime' | 'createUser' | 'updateTime' | 'updateUser'>) => {
-  return request<{ code: number; msg: string }>(`/mgr/truckCompanies/${id}`, 'put', data)
-}
-
-export const deleteTruckcompany = (id: number) => {
-  return request<{ code: number; msg: string }>(`/mgr/truckCompanies/${id}`, 'delete')
-}
-
-export const updateTruckcompanyStatus = (id: number, isValid: number) => {
-  return request<{ code: number; msg: string }>(`/mgr/truckCompanies/${id}/valid?isValid=${isValid}`, 'patch')
+// 状态更新（启用/禁用）
+export const patchTruckcompanyValidApi = (id: number, isValid: number) => {
+  return request<TruckcompanyResponse>(`/mgr/truckCompanies/${id}/valid?isValid=${isValid}`, 'patch')
 }

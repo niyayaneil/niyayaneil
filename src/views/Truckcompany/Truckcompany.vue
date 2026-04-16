@@ -2,7 +2,7 @@
 import { onMounted, ref, reactive, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormRules, FormInstance } from 'element-plus'
-import { getTruckcompanyList, createTruckcompany, updateTruckcompany } from '@/api/Truckcompany'
+import { getTruckcompanyList, addTruckcompanyApi, editTruckcompanyApi, patchTruckcompanyValidApi } from '@/api/Truckcompany'
 import type { TruckcompanyItem, TruckcompanySearchParams } from '@/types/Truckcompany'
 
 onMounted(() => {
@@ -22,6 +22,7 @@ const form = ref<TruckcompanySearchParams>({
 const orderByField = ref('updateTime')
 const orderSortType = ref('descending')
 const loading = ref(false)
+const submitLoading = ref(false)
 // 处理排序变化
 const handleSortChange = ({ prop, order }) => {
   if (!order) {
@@ -73,6 +74,21 @@ const tableData = ref<TruckcompanyItem[]>([])
 // 添加
 const add = () => {
   titleDialog.value = 'New TruckCompany'
+  ruleForm.value = {
+    id: 0,
+    truckCode: '',
+    truckNameEn: '',
+    truckNameCn: '',
+    unlocode: '',
+    createTime: '',
+    createUser: '',
+    updateTime: '',
+    updateUser: '',
+    isValid: 1
+  }
+  nextTick(() => {
+    ruleFormRef.value?.clearValidate()
+  })
   visibleDialog.value = true
 }
 
@@ -147,24 +163,55 @@ const submitForm = async (formEl: FormInstance | undefined) => {
   if (!formEl) return
   await formEl.validate((valid, fields) => {
     if (valid) {
-      let formCopy = JSON.parse(JSON.stringify(ruleForm.value))
+      const formCopy = {
+        id: ruleForm.value.id,
+        truckCode: ruleForm.value.truckCode,
+        truckNameEn: ruleForm.value.truckNameEn,
+        truckNameCn: ruleForm.value.truckNameCn,
+        unlocode: ruleForm.value.unlocode,
+        isValid: ruleForm.value.isValid
+      }
       if (titleDialog.value === 'New TruckCompany') {
         delete formCopy.id
-        // 这里应该调用创建API
-        ElMessage({
-          type: 'success',
-          message: `Success`,
+        submitLoading.value = true
+        addTruckcompanyApi(formCopy).then((res) => {
+          if (res.code === 200) {
+            getTableList()
+            closeDialog()
+            ElMessage({
+              type: 'success',
+              message: 'Truck company added successfully',
+            })
+          }
+        }).catch((err) => {
+          console.error('Add failed:', err)
+          ElMessage({
+            type: 'error',
+            message: 'Failed to add truck company'
+          })
+        }).finally(() => {
+          submitLoading.value = false
         })
-        getTableList()
-        closeDialog()
       } else {
-        // 这里应该调用更新API
-        ElMessage({
-          type: 'success',
-          message: `Success`,
+        submitLoading.value = true
+        editTruckcompanyApi(formCopy).then((res) => {
+          if (res.code === 200) {
+            getTableList()
+            closeDialog()
+            ElMessage({
+              type: 'success',
+              message: 'Truck company updated successfully',
+            })
+          }
+        }).catch((err) => {
+          console.error('Edit failed:', err)
+          ElMessage({
+            type: 'error',
+            message: 'Failed to edit truck company'
+          })
+        }).finally(() => {
+          submitLoading.value = false
         })
-        getTableList()
-        closeDialog()
       }
     } else {
       console.log('error submit!', fields)
@@ -175,11 +222,34 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 const closeDialog = () => {
   visibleDialog.value = false
   nextTick(() => {
-    ruleFormRef.value?.resetFields() // 清空字段并重置校验状态
+    ruleFormRef.value?.resetFields()
   })
 }
 
-
+// 状态切换
+const handleStatusChange = async (row: TruckcompanyItem, newValue: number) => {
+  const originalValue = newValue === 1 ? 0 : 1
+  
+  ElMessageBox.confirm('Please confirm this operation', 'Warning', {
+    confirmButtonText: 'OK',
+    cancelButtonText: 'Cancel',
+    type: 'warning',
+  })
+    .then(async () => {
+      try {
+        await patchTruckcompanyValidApi(row.id, newValue)
+        ElMessage({ type: 'success', message: 'Status updated successfully' })
+        getTableList()
+      } catch (error) {
+        row.isValid = originalValue
+        ElMessage({ type: 'error', message: 'Update failed' })
+      }
+    })
+    .catch(() => {
+      row.isValid = originalValue
+      ElMessage({ type: 'info', message: 'Operation cancelled' })
+    })
+}
 
 const htmlContent = ref(``)
 </script>
@@ -223,7 +293,8 @@ const htmlContent = ref(``)
             <div>{{ indexMethod($index) }}</div>
           </template>
         </el-table-column>
-        <el-table-column prop="truckNameEn" label="Truck name" min-width="118" show-overflow-tooltip />
+        <el-table-column prop="truckNameEn" label="Truck name (EN)" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="truckNameCn" label="Truck name (CN)" min-width="150" show-overflow-tooltip />
         <el-table-column prop="truckCode" label="Truck code" min-width="118" show-overflow-tooltip />
         <el-table-column prop="unlocode" label="UN/LOCODE" min-width="118" show-overflow-tooltip />
         <el-table-column
@@ -244,7 +315,16 @@ const htmlContent = ref(``)
           </template>
         </el-table-column>
 
-        <el-table-column prop="isValid" label="isValid" width="80" show-overflow-tooltip />
+        <el-table-column prop="isValid" label="Status" width="80">
+          <template #default="{ row }">
+            <el-switch
+              v-model="row.isValid"
+              :active-value="1"
+              :inactive-value="0"
+              @change="(val) => handleStatusChange(row, val)"
+            />
+          </template>
+        </el-table-column>
 
         <el-table-column label="" min-width="60">
           <template #default="{ row }">
@@ -345,17 +425,19 @@ const htmlContent = ref(``)
                 <el-input placeholder="Enter UN/LOCODE" v-model.trim="ruleForm.unlocode" />
               </el-form-item>
             </el-col>
-            <el-col :span="12">
-              <el-form-item label="isValid" prop="isValid">
-                <el-input placeholder="Enter isValid" v-model.number="ruleForm.isValid" />
-              </el-form-item>
-            </el-col>
           </el-row>
+          
+          <el-form-item label="Status" prop="isValid">
+            <el-radio-group v-model="ruleForm.isValid">
+              <el-radio :value="0" border>Invalid</el-radio>
+              <el-radio :value="1" border>Valid</el-radio>
+            </el-radio-group>
+          </el-form-item>
         </el-form>
       </div>
       <template #footer>
         <div class="w-full text-right">
-          <el-button type="primary" class="conBtn" @click="submitForm(ruleFormRef)">
+          <el-button type="primary" class="conBtn" @click="submitForm(ruleFormRef)" :loading="submitLoading">
             Confirm
           </el-button>
           <el-button class="closeBtn" @click="closeDialog">Close</el-button>

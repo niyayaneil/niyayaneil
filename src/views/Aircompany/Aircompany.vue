@@ -2,7 +2,7 @@
 import { onMounted, ref, reactive, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormRules, FormInstance } from 'element-plus'
-import { getAircompanyList, addAircompanyApi, editAircompanyApi } from '@/api/Aircompany'
+import { getAircompanyList, addAircompanyApi, editAircompanyApi, patchAircompanyValidApi } from '@/api/Aircompany'
 import type { AircompanyItem, AircompanySearchParams } from '@/types/Aircompany'
 
 onMounted(() => {
@@ -99,6 +99,31 @@ const edit = (row: AircompanyItem) => {
       }
     }
   })
+}
+
+// 状态切换
+const handleStatusChange = async (row: AircompanyItem, newValue: number) => {
+  const originalValue = newValue === 1 ? 0 : 1
+  
+  ElMessageBox.confirm('Please confirm this operation', 'Warning', {
+    confirmButtonText: 'OK',
+    cancelButtonText: 'Cancel',
+    type: 'warning',
+  })
+    .then(async () => {
+      try {
+        await patchAircompanyValidApi(row.id, newValue)
+        ElMessage({ type: 'success', message: 'Status updated successfully' })
+        getTableList()
+      } catch (error) {
+        row.isValid = originalValue
+        ElMessage({ type: 'error', message: 'Update failed' })
+      }
+    })
+    .catch(() => {
+      row.isValid = originalValue
+      ElMessage({ type: 'info', message: 'Operation cancelled' })
+    })
 }
 
 // 弹窗
@@ -238,7 +263,7 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 const closeDialog = () => {
   visibleDialog.value = false
   nextTick(() => {
-    ruleFormRef.value?.resetFields() // 清空字段并重置校验状态
+    ruleFormRef.value?.resetFields()
   })
 }
 
@@ -314,7 +339,17 @@ const htmlContent = ref(``)
           </template>
         </el-table-column>
 
-        <el-table-column prop="isValid" label="isValid" width="80" show-overflow-tooltip />
+        <!-- 修改：Status 开关列 -->
+        <el-table-column prop="isValid" label="Status" width="80">
+          <template #default="{ row }">
+            <el-switch
+              v-model="row.isValid"
+              :active-value="1"
+              :inactive-value="0"
+              @change="(val) => handleStatusChange(row, val)"
+            />
+          </template>
+        </el-table-column>
 
         <el-table-column label="" min-width="60">
           <template #default="{ row }">

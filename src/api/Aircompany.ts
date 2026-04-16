@@ -14,3 +14,8 @@ export const addAircompanyApi = (data: AircompanyItem) => {
 export const editAircompanyApi = (data: AircompanyItem) => {
   return request<AircompanyResponse>(`/mgr/airCompanies/${data.id}`, 'put', data)
 }
+
+// 状态更新（启用/禁用）
+export const patchAircompanyValidApi = (id: number, isValid: number) => {
+  return request<AircompanyResponse>(`/mgr/airCompanies/${id}/valid?isValid=${isValid}`, 'patch')
+}

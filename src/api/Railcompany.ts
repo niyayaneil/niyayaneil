@@ -39,3 +39,18 @@ export interface RailcompanyResponse {
 export const getRailcompanyList = (params: RailcompanySearchParams) => {
   return request('/mgr/railCompanies/page', 'post', params)
 }
+
+// 新增
+export const addRailcompanyApi = (data: RailcompanyItem) => {
+  return request('/mgr/railCompanies', 'post', data)
+}
+
+// 编辑
+export const editRailcompanyApi = (data: RailcompanyItem) => {
+  return request(`/mgr/railCompanies/${data.id}`, 'put', data)
+}
+
+// 状态更新（启用/禁用）
+export const patchRailcompanyValidApi = (id: number, isValid: number) => {
+  return request(`/mgr/railCompanies/${id}/valid?isValid=${isValid}`, 'patch')
+}
