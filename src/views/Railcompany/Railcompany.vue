@@ -8,15 +8,10 @@ onMounted(() => {
   getTableList()
 })
 
-// 搜索
+// 分页
 const form = ref({
   pageNum: 1,
-  pageSize: 30,
-  railroadCode: '',
-  railroadNameEn: '',
-  railroadNameCn: '',
-  partnerCarriers: '',
-  isValid: undefined as number | undefined,
+  pageSize: 30
 })
 
 const loading = ref(false)
@@ -64,25 +59,6 @@ const handlePageSizeChange = (val: number) => {
 }
 
 const tableData = ref<RailcompanyItem[]>([])
-
-// 筛选
-const handleSearch = () => {
-  form.value.pageNum = 1
-  getTableList()
-}
-
-const handleReset = () => {
-  form.value = {
-    pageNum: 1,
-    pageSize: 30,
-    railroadCode: '',
-    railroadNameEn: '',
-    railroadNameCn: '',
-    partnerCarriers: '',
-    isValid: undefined,
-  }
-  getTableList()
-}
 
 // 添加
 const add = () => {
@@ -135,13 +111,6 @@ const rules = reactive<FormRules<any>>({
       trigger: 'change',
     },
   ],
-  isValid: [
-    {
-      required: true,
-      message: 'Required',
-      trigger: 'change',
-    },
-  ],
 })
 
 const ruleForm = ref<any>({
@@ -151,37 +120,10 @@ const ruleForm = ref<any>({
   railroadNameCn: '',
   partnerCarriers: '',
   description: '',
-  isValid: 1,
-  createTime: '',
   updateTime: '',
-  createUser: '',
-  updateUser: ''
+  updateUser: '',
+  isValid: 1
 })
-
-const handleStatusChange = async (row: { id: number; isValid: number }) => {
-  ElMessageBox.confirm('Please confirm this operation', 'Warning', {
-    confirmButtonText: 'OK',
-    cancelButtonText: 'Cancel',
-    type: 'warning',
-  })
-    .then(async () => {
-      // 这里应该调用更新状态的API
-      row.isValid = row.isValid === 1 ? 0 : 1
-      ElMessage({
-        type: 'success',
-        message: `Success`,
-      })
-      getTableList()
-    })
-    .catch(() => {
-      // 恢复原状态
-      getTableList()
-      ElMessage({
-        type: 'info',
-        message: 'Canceled',
-      })
-    })
-}
 
 const submitForm = async (formEl: FormInstance | undefined) => {
   if (!formEl) return
@@ -225,52 +167,6 @@ const htmlContent = ref(``)
 <template>
   <div class="mt-[3px]">
     <div class="p-[24px] bg-white">
-      <!-- 搜索表单 -->
-      <el-form :model="form" class="mb-4" label-width="100px">
-        <el-row :gutter="20">
-          <el-col :span="6">
-            <el-form-item label="Railway code">
-              <el-input v-model="form.railroadCode" placeholder="Enter railway code" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item label="Railway name (EN)">
-              <el-input v-model="form.railroadNameEn" placeholder="Enter railway name" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item label="Railway name (CN)">
-              <el-input v-model="form.railroadNameCn" placeholder="Enter railway name" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item label="Partner Carriers">
-              <el-input v-model="form.partnerCarriers" placeholder="Enter partner carriers" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item label="Status">
-              <el-select v-model="form.isValid" placeholder="Select status">
-                <el-option label="Valid" value="1" />
-                <el-option label="Invalid" value="0" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12" class="flex items-end">
-            <el-button
-              type="primary"
-              @click="handleSearch"
-              class="mr-2"
-            >
-              Search
-            </el-button>
-            <el-button @click="handleReset">
-              Reset
-            </el-button>
-          </el-col>
-        </el-row>
-      </el-form>
-
       <el-button
         @click="add"
         class="flex h-[33px] text-[#fff] mb-[12px] text-[14px] px-4 justify-center items-center gap-6 rounded-[4px] bg-[#2D8AE0]"
@@ -296,7 +192,7 @@ const htmlContent = ref(``)
         v-loading="loading"
         :data="tableData"
         style="width: 100%"
-        height="calc(100vh - 320px)"
+        height="calc(100vh - 240px)"
         stripe
         empty-text="No data available"
       >
@@ -310,23 +206,15 @@ const htmlContent = ref(``)
         <el-table-column prop="railroadCode" label="Railway code" min-width="100" show-overflow-tooltip />
         <el-table-column prop="partnerCarriers" label="Partner Carriers" min-width="150" show-overflow-tooltip />
         <el-table-column prop="description" label="Description" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="createUser" label="Creator" width="100" show-overflow-tooltip />
+        <el-table-column prop="updateUser" label="Updater" width="100" show-overflow-tooltip />
         <el-table-column
-          prop="createTime"
-          label="Create Time"
+          prop="updateTime"
+          label="Update Time"
           width="160"
           show-overflow-tooltip
         />
-        <el-table-column prop="isValid" label="Status" width="80">
-          <template #default="{ row }">
-            <el-switch
-              v-model="row.isValid"
-              style="--el-switch-on-color: #409eff; --el-switch-off-color: #ccc"
-              active-value="1"
-              inactive-value="0"
-            />
-          </template>
-        </el-table-column>
+
+        <el-table-column prop="isValid" label="isValid" width="80" show-overflow-tooltip />
 
         <el-table-column label="" min-width="60">
           <template #default="{ row }">
@@ -439,12 +327,13 @@ const htmlContent = ref(``)
             />
           </el-form-item>
 
-          <el-form-item label="Status" prop="isValid">
-            <el-radio-group v-model="ruleForm.isValid">
-              <el-radio :value="1" border>Valid</el-radio>
-              <el-radio :value="0" border>Invalid</el-radio>
-            </el-radio-group>
-          </el-form-item>
+          <el-row :gutter="24">
+            <el-col :span="12">
+              <el-form-item label="isValid">
+                <el-input placeholder="Enter isValid" v-model.number="ruleForm.isValid" />
+              </el-form-item>
+            </el-col>
+          </el-row>
         </el-form>
       </div>
       <template #footer>

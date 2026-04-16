@@ -10,6 +10,7 @@ export interface AircompanyItem {
   createUser: string
   updateTime: string
   updateUser: string
+  isValid: number
 }
 
 export interface AircompanySearchParams {

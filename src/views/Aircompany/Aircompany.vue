@@ -19,6 +19,20 @@ const form = ref<AircompanySearchParams>({
   cargowiseCode: '',
   unlocode: ''
 })
+const orderByField = ref('updateTime')
+const orderSortType = ref('descending')
+// 处理排序变化
+const handleSortChange = ({ prop, order }) => {
+  if (!order) {
+    orderByField.value = ''
+    orderSortType.value = ''
+    getTableList()
+  } else {
+    orderByField.value = prop
+    orderSortType.value = order === 'ascending' ? 'asc' : 'desc'
+    getTableList()
+  }
+}
 
 const getTableList = async () => {
   try {
@@ -40,13 +54,13 @@ const indexMethod = (index: number) => {
 }
 
 const total = ref(0)
-const handlePageNumChange = (val: number) => {
-  form.value.pageNum = val
+const handlePageSizeChange = (val: number) => {
+  form.value.pageSize = val
   getTableList()
 }
 
-const handlePageSizeChange = (val: number) => {
-  form.value.pageSize = val
+const handlePageNumChange = (val: number) => {
+  form.value.pageNum = val
   getTableList()
 }
 
@@ -117,6 +131,13 @@ const rules = reactive<FormRules<AircompanyItem>>({
       trigger: 'change',
     },
   ],
+  isValid: [
+    {
+      required: true,
+      message: 'Required',
+      trigger: 'change',
+    },
+  ],
 
 })
 
@@ -131,7 +152,8 @@ const ruleForm = ref<AircompanyItem>({
   createTime: '',
   createUser: '',
   updateTime: '',
-  updateUser: ''
+  updateUser: '',
+  isValid: 1
 })
 
 
@@ -248,6 +270,8 @@ const htmlContent = ref(``)
           </template>
         </el-table-column>
 
+        <el-table-column prop="isValid" label="isValid" width="80" show-overflow-tooltip />
+
         <el-table-column label="" min-width="60">
           <template #default="{ row }">
             <div class="w-[16px] h-[16px] cursor-pointer" @click="edit(row)">
@@ -288,10 +312,10 @@ const htmlContent = ref(``)
           v-model:current-page="form.pageNum"
           v-model:page-size="form.pageSize"
           :page-sizes="[30, 50, 100, 200]"
-          layout="sizes, prev, pager, next"
+          layout="sizes, prev, pager, next, jumper"
           :total="total"
-          @size-change="handlePageNumChange"
-          @current-change="handlePageSizeChange"
+          @size-change="handlePageSizeChange"
+          @current-change="handlePageNumChange"
         />
       </div>
     </div>
@@ -360,6 +384,14 @@ const htmlContent = ref(``)
             <el-col :span="12">
               <el-form-item label="Website URL" prop="airCargoUrl">
                 <el-input placeholder="Enter Website URL" v-model.trim="ruleForm.airCargoUrl" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-row :gutter="24">
+            <el-col :span="12">
+              <el-form-item label="isValid" prop="isValid">
+                <el-input placeholder="Enter isValid" v-model.number="ruleForm.isValid" />
               </el-form-item>
             </el-col>
           </el-row>
