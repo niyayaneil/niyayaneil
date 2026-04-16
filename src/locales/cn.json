@@ -1,0 +1,24 @@
+{
+  "bl_op_BillManagement": {
+    "degree": "紧急程度",
+    "urgency": "紧急",
+    "nourgency": "不紧急",
+    "applyRelease": "申请放单",
+    "applyDeduct": "申请扣单",
+    "noStatus": "无状态",
+    "batchExport": "批量导出",
+    "selectedExport": "选中导出",
+    "allExport": "全部导出",
+    "releaseConfirm": "放单确认",
+    "deductConfirm": "扣单确认",
+    "totalData": "共111项数据",
+    "confirmRelease": "您正在执行MBL.No为123的放单申请，是否确认？",
+    "confirmDeduct": "您正在执行MBL.No为123的扣单申请，是否确认？",
+    "reason": "请输入执行原因",
+    "bookingPort": "订舱口",
+    "blType": "提单类型",
+    "operation": "操作",
+    "confirm": "确认",
+    "selectData": "请先选择数据"
+  }
+}

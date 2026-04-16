@@ -1,0 +1,24 @@
+{
+  "bl_op_BillManagement": {
+    "degree": "degree",
+    "urgency": "urgency",
+    "nourgency": "nourgency",
+    "applyRelease": "applyRelease",
+    "applyDeduct": "applyDeduct",
+    "noStatus": "noStatus",
+    "batchExport": "batchExport",
+    "selectedExport": "selectedExport",
+    "allExport": "allExport",
+    "releaseConfirm": "releaseConfirm",
+    "deductConfirm": "deductConfirm",
+    "totalData": "共111项数据",
+    "confirmRelease": "您正在执行MBL.No为123的放单申请，是否确认？",
+    "confirmDeduct": "您正在执行MBL.No为123的扣单申请，是否确认？",
+    "reason": "请输入执行原因",
+    "bookingPort": "订舱口",
+    "blType": "提单类型",
+    "operation": "操作",
+    "confirm": "确认",
+    "selectData": "请先选择数据"
+  }
+}

@@ -1,0 +1,84 @@
+// 颜色text-[var(--cp-primary)]
+// 背景色bg-[var(--cp-text1)]
+// 字体:style="{ fontSize: 'var(--cp-font-size18)' }"
+
+:root {
+    --background-default: #F5F5F5;
+    --background-light: #F6FBFF;
+    --background-Subtle:#E0F0FF;
+    --background-default11: #2D8AE0;
+    --background-white: #FFFFFF;
+    --background-specia: rgba(29, 33, 41, 0.6);
+    --button-bg-Default: #F5F5F5;
+    --button-bg-active: #2D8AE0;
+    --button-bg-Success: #00B42A;
+    --button-bg-Warning: #FF7D00;
+    --button-bg-Danger: #F53F3F;
+    --button-bg-info: #E0E0E0;
+    --button-bg-button-border: #2D8AE0;
+    --button-Tag-bg-hover: rgba(45, 138, 224, 0.08);
+    --button-Tag-bg-Success: rgba(0, 180, 42, 0.08);
+    --button-Tag-bg-Warning: rgba(255, 125, 0, 0.08);
+    --button-Tag-bg-Danger: rgba(245, 63, 63, 0.08);
+    --text-defaul: #303236;
+    --text-subtle: #626469;
+    --text-subtler: #97989A;
+    --text-subtlest: #E0E0E0;
+    --text-inverse-text: #FFFFFF;
+    --text-strong-body-title:#2D8AE0;
+    --text-Tag-danger:#F53F3F;
+    --text-Tag-warning:#FF7D00;
+    --text-Tag-Success:#00B42A;
+    --text-Tag-secondary:#174570;
+    --icon-brand:#2D8AE0;
+    --icon-secondary:#174570;
+    --icon-danger:#F53F3F;
+    --icon-Success:#00B42A;
+    --icon-warning:#FF7D00;
+    --icon-Brand1-2:rgba(45, 138, 224, 0.4);
+    --icon-Brand1-1:rgba(45, 138, 224, 0.08);
+    --icon-defaul:#303236;
+    --icon-subtle:#626469;
+    --icon-subtler:#97989A;
+    --icon-subtlest:#E0E0E0;
+    --icon-inverse-text:#FFFFFF;
+    --line-defaul:#FFFFFF;
+    --line-active:#2D8AE0;
+    --line-dark-hover:rgba(45, 138, 224, 0.08);
+    --line-Neutral-1:#F5F5F5;
+    --line-normal:#E0E0E0;
+    --line-light:#F5F5F5;
+    --line-strong:#626469;
+    // 公共字体大小
+    --cp-font-size14: 14px;
+    --cp-font-size16: 16px;
+    --cp-font-size18: 18px;
+}
+
+
+// 全局样式
+* {
+    margin: 0;
+    padding: 0;
+}
+
+
+body {
+    font-family: Consolas, Menlo, Monaco, 'Courier New', monospace;
+    font-size: 14px;
+}
+a {
+    text-decoration: none;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+ul,
+ol {
+    margin: 0;
+    padding: 0;
+}

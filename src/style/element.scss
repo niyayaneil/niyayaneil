@@ -1,0 +1,111 @@
+// .no-popper {
+//     display: none !important;
+//   }
+.el-popper .el-menu  {
+   display: none !important;
+  }
+  .el-button:hover{
+    background-color: #2D8AE0 !important;
+    color: #fff !important;
+  }
+  
+  .el-table thead tr th{
+    font-weight: 500;
+    color: #666;
+    background-color: #F5F5F5 !important
+  }
+  // 分页
+.paginationTotal{
+  color: var(--text-subtler);
+}
+// 搜索
+.demo-form-inline .el-input {
+  --el-input-width: 241px;
+}
+.el-form--inline .el-form-item{
+  margin-right: 10px !important;
+}
+.demo-form-inline .el-select {
+  --el-select-width: 241px;
+}
+.mark.el-popper.is-light{
+  background-color: #FFF !important;
+  border: 1px solid #303133 !important;
+}
+.mark.el-popper[data-popper-placement^=bottom]>.el-popper__arrow:before{
+  border-left-color: #303133 !important;
+  border-top-color: #303133 !important;
+}
+.del-message-box{
+  .el-icon.el-message-box__status.el-message-box-icon--warning{
+    width: 20px;
+    height: 20px;
+    background-image: url('@/assets/images/warning.png') !important;
+    background-size: contain;
+      svg{
+        display: none !important;
+      }
+  
+  }
+  .el-button--primary{
+    color: #fff !important;
+    background-color: #F76060;
+    border:0px;
+  }
+  .el-button:hover{
+    background-color: #FFF !important;
+    border-color: #dcdfe6 !important;
+    color: #606266 !important;
+  }
+  .el-button--primary:hover{
+    background-color: #F76060 !important;
+    color: #fff !important;
+  }
+}
+.el-pagination .el-select__wrapper{
+  box-shadow: none !important;
+  background-color: var(--background-default);
+}
+.el-pager li.is-active{
+  background-color: var(--icon-brand);
+  color: #fff !important;
+}
+  .el-table tbody tr td{
+    color: #405262;
+  }
+  .el-dialog{
+    padding: 0px !important;
+  }
+  .el-dialog__header{
+    padding: 24px !important;
+    border-bottom: 1px solid #F0F0F0;
+  }
+  .el-dialog__body{
+    padding: 24px 48px !important;
+  }
+  .el-dialog__footer{
+    padding: 0px 24px 24px 24px!important;
+  }
+  .conBtn{
+    display: flex;
+    width: 72px;
+    height: 32px;
+    padding: 5px 16px;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    border-radius: 4px !important;
+    background: #2D8AE0;
+  }
+  .closeBtn{
+    display: flex;
+    width: 72px;
+    height:32px;
+    padding: 5px 16px;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    border-radius:4px !important;
+    border: 1px solid #E4E7EA;
+    background: #FFF;
+  }
