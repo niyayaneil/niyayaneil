@@ -31,6 +31,18 @@ export const useIconStore = defineStore(
     </clipPath>
   </defs>
 </svg>`)
+    // TruckcompanyIcon
+    const TruckcompanyIcon = ref<String>(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+  <path d="M1.5 9.5H12.5V12.5H1.5V9.5Z" fill="white" stroke="white" stroke-width="0.5"/>
+  <path d="M12.5 9.5L14 11.5H12.5V9.5Z" fill="white" stroke="white" stroke-width="0.5"/>
+  <rect x="2" y="4" width="10" height="5.5" fill="white" stroke="white" stroke-width="0.5"/>
+  <rect x="2.5" y="4.5" width="9" height="4.5" fill="none" stroke="#2D8AE0" stroke-width="0.8"/>
+  <circle cx="4" cy="12.5" r="1.2" fill="white" stroke="#2D8AE0" stroke-width="0.5"/>
+  <circle cx="10" cy="12.5" r="1.2" fill="white" stroke="#2D8AE0" stroke-width="0.5"/>
+  <rect x="11.5" y="5.5" width="2" height="3.5" rx="0.5" fill="white" stroke="#2D8AE0" stroke-width="0.5"/>
+  <path d="M3 4L4 2H9L10 4" stroke="white" stroke-width="0.8" fill="none"/>
+  <rect x="5.5" y="2.5" width="2" height="1.5" rx="0.3" fill="white" stroke="#2D8AE0" stroke-width="0.5"/>
+</svg>`)
     // SupplierManagementIcon
     const SupplierManagementIcon = ref<String>(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
   <path d="M11.0442 2.03662C11.0442 1.76048 11.268 1.53662 11.5442 1.53662C12.2184 1.53662 12.865 1.80446 13.3418 2.28122C13.8186 2.75798 14.0864 3.4046 14.0864 4.07884V12.2477C14.0864 12.9219 13.8186 13.5686 13.3418 14.0453C12.865 14.5221 12.2184 14.7899 11.5442 14.7899C11.268 14.7899 11.0442 14.5661 11.0442 14.2899C11.0442 14.0138 11.268 13.7899 11.5442 13.7899C11.9532 13.7899 12.3455 13.6274 12.6347 13.3382C12.9239 13.049 13.0864 12.6567 13.0864 12.2477V4.07884C13.0864 3.66982 12.9239 3.27755 12.6347 2.98833C12.3455 2.6991 11.9532 2.53662 11.5442 2.53662C11.268 2.53662 11.0442 2.31276 11.0442 2.03662Z" fill="white"/>
@@ -156,6 +168,7 @@ export const useIconStore = defineStore(
       TitleIcon,
       TitleTwoIcon,
       AircompanyIcon,
+	  TruckcompanyIcon,
       RailcompanyIcon,
       CarrierManagementIcon,
       SupplierManagementIcon,

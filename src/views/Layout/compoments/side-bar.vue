@@ -47,7 +47,7 @@ const menuItems1 = ref([
   {
     index: '1-14',
     route: '/Truckcompany',
-    icon: 'RailcompanyIcon',
+    icon: 'TruckcompanyIcon',
     title: 'TruckCompany',
   },
   {
