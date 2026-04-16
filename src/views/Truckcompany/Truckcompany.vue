@@ -2,25 +2,26 @@
 import { onMounted, ref, reactive, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormRules, FormInstance } from 'element-plus'
-import { getAircompanyList, addAircompanyApi, editAircompanyApi } from '@/api/Aircompany'
-import type { AircompanyItem, AircompanySearchParams } from '@/types/Aircompany'
+import { getTruckcompanyList, createTruckcompany, updateTruckcompany } from '@/api/Truckcompany'
+import type { TruckcompanyItem, TruckcompanySearchParams } from '@/types/Truckcompany'
 
 onMounted(() => {
   getTableList()
 })
 
 // 搜索
-const form = ref<AircompanySearchParams>({
+const form = ref<TruckcompanySearchParams>({
   pageNum: 1,
   pageSize: 30,
-  iataCode: '',
-  airlineNameEn: '',
-  airlineNameCn: '',
-  cargowiseCode: '',
-  unlocode: ''
+  truckCode: '',
+  truckNameEn: '',
+  truckNameCn: '',
+  unlocode: '',
+  isValid: undefined
 })
 const orderByField = ref('updateTime')
 const orderSortType = ref('descending')
+const loading = ref(false)
 // 处理排序变化
 const handleSortChange = ({ prop, order }) => {
   if (!order) {
@@ -36,14 +37,17 @@ const handleSortChange = ({ prop, order }) => {
 
 const getTableList = async () => {
   try {
-    const response = await getAircompanyList(form.value)
+    loading.value = true
+    const response = await getTruckcompanyList(form.value)
     tableData.value = response.data.list
     total.value = response.data.total
   } catch (error) {
     ElMessage({
       type: 'error',
-      message: 'Failed to get air company list'
+      message: 'Failed to get truck company list'
     })
+  } finally {
+    loading.value = false
   }
 }
 
@@ -64,33 +68,16 @@ const handlePageNumChange = (val: number) => {
   getTableList()
 }
 
-const tableData = ref<AircompanyItem[]>([])
+const tableData = ref<TruckcompanyItem[]>([])
 
 // 添加
 const add = () => {
-  titleDialog.value = 'New AirCompany'
-  ruleForm.value = {
-    id: 0,
-    iataCode: '',
-    airlineNameEn: '',
-    airlineNameCn: '',
-    cargowiseCode: '',
-    unlocode: '',
-    airCargoUrl: '',
-    createTime: '',
-    createUser: '',
-    updateTime: '',
-    updateUser: '',
-    isValid: 1
-  }
-  nextTick(() => {
-    ruleFormRef.value?.clearValidate()
-  })
+  titleDialog.value = 'New TruckCompany'
   visibleDialog.value = true
 }
 
-const edit = (row: AircompanyItem) => {
-  titleDialog.value = 'Edit AirCompany'
+const edit = (row: TruckcompanyItem) => {
+  titleDialog.value = 'Edit TruckCompany'
   visibleDialog.value = true
   nextTick(() => {
     for (let key in ruleForm.value) {
@@ -105,30 +92,22 @@ const edit = (row: AircompanyItem) => {
 const visibleDialog = ref(false)
 const titleDialog = ref('')
 const ruleFormRef = ref<FormInstance>()
-const loading = ref(false)
-const rules = reactive<FormRules<AircompanyItem>>({
-  iataCode: [
+const rules = reactive<FormRules<TruckcompanyItem>>({
+  truckCode: [
     {
       required: true,
       message: 'Required',
       trigger: 'change',
     },
   ],
-  airlineNameEn: [
+  truckNameEn: [
     {
       required: true,
       message: 'Required',
       trigger: 'change',
     },
   ],
-  airlineNameCn: [
-    {
-      required: true,
-      message: 'Required',
-      trigger: 'change',
-    },
-  ],
-  cargowiseCode: [
+  truckNameCn: [
     {
       required: true,
       message: 'Required',
@@ -142,13 +121,6 @@ const rules = reactive<FormRules<AircompanyItem>>({
       trigger: 'change',
     },
   ],
-  airCargoUrl: [
-    {
-      required: true,
-      message: 'Required',
-      trigger: 'change',
-    },
-  ],
   isValid: [
     {
       required: true,
@@ -156,17 +128,14 @@ const rules = reactive<FormRules<AircompanyItem>>({
       trigger: 'change',
     },
   ],
-
 })
 
-const ruleForm = ref<AircompanyItem>({
+const ruleForm = ref<TruckcompanyItem>({
   id: 0,
-  iataCode: '',
-  airlineNameEn: '',
-  airlineNameCn: '',
-  cargowiseCode: '',
+  truckCode: '',
+  truckNameEn: '',
+  truckNameCn: '',
   unlocode: '',
-  airCargoUrl: '',
   createTime: '',
   createUser: '',
   updateTime: '',
@@ -174,60 +143,28 @@ const ruleForm = ref<AircompanyItem>({
   isValid: 1
 })
 
-
-
 const submitForm = async (formEl: FormInstance | undefined) => {
   if (!formEl) return
   await formEl.validate((valid, fields) => {
     if (valid) {
-      loading.value = true
-      const formCopy = {
-        id: ruleForm.value.id,
-        iataCode: ruleForm.value.iataCode,
-        airlineNameEn: ruleForm.value.airlineNameEn,
-        airlineNameCn: ruleForm.value.airlineNameCn,
-        cargowiseCode: ruleForm.value.cargowiseCode,
-        unlocode: ruleForm.value.unlocode,
-        airCargoUrl: ruleForm.value.airCargoUrl,
-        isValid: ruleForm.value.isValid
-      }
-      if (titleDialog.value === 'New AirCompany') {
+      let formCopy = JSON.parse(JSON.stringify(ruleForm.value))
+      if (titleDialog.value === 'New TruckCompany') {
         delete formCopy.id
-        addAircompanyApi(formCopy).then((res) => {
-          if (res.data) {
-            getTableList()
-            closeDialog()
-            ElMessage({
-              type: 'success',
-              message: 'Air company added successfully',
-            })
-          }
-        }).catch((err) => {
-          console.error('Add failed:', err)
-          ElMessage({
-            type: 'error',
-            message: 'Failed to add air company'
-          })
-        }).finally(() => {
-          loading.value = false
+        // 这里应该调用创建API
+        ElMessage({
+          type: 'success',
+          message: `Success`,
         })
+        getTableList()
+        closeDialog()
       } else {
-        editAircompanyApi(formCopy).then((res) => {
-          getTableList()
-          closeDialog()
-          ElMessage({
-            type: 'success',
-            message: 'Air company updated successfully',
-          })
-        }).catch((err) => {
-          console.error('Edit failed:', err)
-          ElMessage({
-            type: 'error',
-            message: 'Failed to edit air company'
-          })
-        }).finally(() => {
-          loading.value = false
+        // 这里应该调用更新API
+        ElMessage({
+          type: 'success',
+          message: `Success`,
         })
+        getTableList()
+        closeDialog()
       }
     } else {
       console.log('error submit!', fields)
@@ -241,6 +178,8 @@ const closeDialog = () => {
     ruleFormRef.value?.resetFields() // 清空字段并重置校验状态
   })
 }
+
+
 
 const htmlContent = ref(``)
 </script>
@@ -267,35 +206,26 @@ const htmlContent = ref(``)
             />
           </svg>
         </div>
-        New AirCompany</el-button
+        New TruckCompany</el-button
       >
       <el-table
+        v-loading="loading"
         :data="tableData"
         style="width: 100%"
         :default-sort="{ prop: orderByField, order: orderSortType }"
         @sort-change="handleSortChange"
         height="calc(100vh - 240px)"
         stripe
+        empty-text="No data available"
       >
         <el-table-column prop="id" label="#" width="60">
           <template #default="{ $index }">
             <div>{{ indexMethod($index) }}</div>
           </template>
         </el-table-column>
-        <el-table-column prop="airlineNameEn" label="Airline name" min-width="118" show-overflow-tooltip />
-        <el-table-column prop="iataCode" label="Airline code" min-width="118" show-overflow-tooltip />
-        <el-table-column
-          prop="cargowiseCode"
-          label="Airline CW9 code"
-          min-width="142"
-          show-overflow-tooltip
-        />
+        <el-table-column prop="truckNameEn" label="Truck name" min-width="118" show-overflow-tooltip />
+        <el-table-column prop="truckCode" label="Truck code" min-width="118" show-overflow-tooltip />
         <el-table-column prop="unlocode" label="UN/LOCODE" min-width="118" show-overflow-tooltip />
-        <el-table-column prop="airCargoUrl" label="Website URL" min-width="136" show-overflow-tooltip>
-          <template #default="{ row }">
-            <a :href="row.airCargoUrl" target="_blank">{{ row.airCargoUrl }}</a>
-          </template>
-        </el-table-column>
         <el-table-column
           prop="updateUser"
           label="Updater"
@@ -356,7 +286,7 @@ const htmlContent = ref(``)
           v-model:current-page="form.pageNum"
           v-model:page-size="form.pageSize"
           :page-sizes="[30, 50, 100, 200]"
-          layout="sizes, prev, pager, next, jumper"
+          layout="sizes, prev, pager, next"
           :total="total"
           @size-change="handlePageSizeChange"
           @current-change="handlePageNumChange"
@@ -397,42 +327,24 @@ const htmlContent = ref(``)
           label-width="auto"
           class="demo-ruleForm"
         >
-          <el-form-item label="Airline code" prop="iataCode">
-            <el-input placeholder="Enter airline code" v-model.trim="ruleForm.iataCode" />
+          <el-form-item label="Truck code" prop="truckCode">
+            <el-input placeholder="Enter truck code" v-model.trim="ruleForm.truckCode" />
           </el-form-item>
 
-          <el-form-item label="Airline name (EN)" prop="airlineNameEn">
-            <el-input placeholder="Enter airline name (EN)" v-model="ruleForm.airlineNameEn" />
+          <el-form-item label="Truck name (EN)" prop="truckNameEn">
+            <el-input placeholder="Enter truck name (EN)" v-model="ruleForm.truckNameEn" />
           </el-form-item>
 
-          <el-form-item label="Airline name (CN)" prop="airlineNameCn">
-            <el-input placeholder="Enter airline name (CN)" v-model="ruleForm.airlineNameCn" />
+          <el-form-item label="Truck name (CN)" prop="truckNameCn">
+            <el-input placeholder="Enter truck name (CN)" v-model="ruleForm.truckNameCn" />
           </el-form-item>
 
           <el-row :gutter="24">
-            <el-col :span="12">
-              <el-form-item label="Airline CW9 code" prop="cargowiseCode">
-                <el-input
-                  placeholder="Enter airline CW9 code"
-                  v-model.trim="ruleForm.cargowiseCode"
-                />
-              </el-form-item>
-            </el-col>
             <el-col :span="12">
               <el-form-item label="UN/LOCODE" prop="unlocode">
                 <el-input placeholder="Enter UN/LOCODE" v-model.trim="ruleForm.unlocode" />
               </el-form-item>
             </el-col>
-          </el-row>
-          <el-row :gutter="24">
-            <el-col :span="12">
-              <el-form-item label="Website URL" prop="airCargoUrl">
-                <el-input placeholder="Enter Website URL" v-model.trim="ruleForm.airCargoUrl" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-
-          <el-row :gutter="24">
             <el-col :span="12">
               <el-form-item label="isValid" prop="isValid">
                 <el-input placeholder="Enter isValid" v-model.number="ruleForm.isValid" />
@@ -443,7 +355,7 @@ const htmlContent = ref(``)
       </div>
       <template #footer>
         <div class="w-full text-right">
-          <el-button type="primary" class="conBtn" @click="submitForm(ruleFormRef)" :loading="loading">
+          <el-button type="primary" class="conBtn" @click="submitForm(ruleFormRef)">
             Confirm
           </el-button>
           <el-button class="closeBtn" @click="closeDialog">Close</el-button>

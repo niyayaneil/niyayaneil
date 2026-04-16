@@ -16,11 +16,8 @@ const router = createRouter({
         meta: { parTitle: 'Sea Data', title: 'Carrier' }
       },
       {        path: 'Aircompany',        component: () => import('@/views/Aircompany/Aircompany.vue'),        meta: { parTitle: 'Sea Data', title: 'AirCompany' }      },
-      {
-        path: 'Railcompany',
-        component: () => import('@/views/Railcompany/Railcompany.vue'),
-        meta: { parTitle: 'Sea Data', title: 'RailCompany' }
-      },
+      {        path: 'Railcompany',        component: () => import('@/views/Railcompany/Railcompany.vue'),        meta: { parTitle: 'Sea Data', title: 'RailCompany' }      },
+      {        path: 'Truckcompany',        component: () => import('@/views/Truckcompany/Truckcompany.vue'),        meta: { parTitle: 'Sea Data', title: 'TruckCompany' }      },
       {
         path: 'SupplierManagement',
         component: () => import('@/views/SupplierManagement/SupplierManagement.vue'),

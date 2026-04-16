@@ -45,6 +45,12 @@ const menuItems1 = ref([
     title: 'RailCompany',
   },
   {
+    index: '1-14',
+    route: '/Truckcompany',
+    icon: 'RailcompanyIcon',
+    title: 'TruckCompany',
+  },
+  {
     index: '1-1',
     route: '/CarrierManagement',
     icon: 'CarrierManagementIcon',
