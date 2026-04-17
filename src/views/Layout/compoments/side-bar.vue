@@ -51,6 +51,18 @@ const menuItems1 = ref([
     title: 'TruckCompany',
   },
   {
+    index: '1-15',
+    route: '/Warehouse',
+    icon: 'WarehouseIcon',
+    title: 'Warehouse',
+  },
+  {
+    index: '1-16',
+    route: '/LclWarehouseFreeTime',
+    icon: 'WarehouseIcon',
+    title: 'LCL Warehouse Free Time',
+  },
+  {
     index: '1-1',
     route: '/CarrierManagement',
     icon: 'CarrierManagementIcon',

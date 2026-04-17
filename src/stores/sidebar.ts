@@ -164,12 +164,22 @@ export const useIconStore = defineStore(
   <path d="M12 11.5C11.4477 11.5 11 11.0523 11 10.5C11 9.94772 11.4477 9.5 12 9.5C12.5523 9.5 13 9.94772 13 10.5C13 11.0523 12.5523 11.5 12 11.5Z" fill="white"/>
 </svg>`)
 
+    const WarehouseIcon = ref<String>(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+  <path d="M2.6665 2.66675C2.49036 2.66675 2.3335 2.82361 2.3335 3.00075V13C2.3335 13.1769 2.49036 13.3337 2.6665 13.3337H13.3332C13.5093 13.3337 13.6665 13.1769 13.6665 13V3.00075C13.6665 2.82361 13.5093 2.66675 13.3332 2.66675H2.6665Z" fill="white"/>
+  <path d="M2.3335 3.00075H13.6665V7.33341H2.3335V3.00075Z" fill="white"/>
+  <path d="M5.6665 7.33341H10.3332V13.3337H5.6665V7.33341Z" fill="white"/>
+  <path d="M7.3332 9.00075H8.6665V11.6674H7.3332V9.00075Z" fill="white"/>
+  <path d="M2.3335 7.33341H3.66684V13.3337H2.3335V7.33341Z" fill="white"/>
+  <path d="M12.3332 7.33341H13.6665V13.3337H12.3332V7.33341Z" fill="white"/>
+</svg>`)
+
     return {
       TitleIcon,
       TitleTwoIcon,
       AircompanyIcon,
 	  TruckcompanyIcon,
       RailcompanyIcon,
+      WarehouseIcon,
       CarrierManagementIcon,
       SupplierManagementIcon,
       PortIcon,

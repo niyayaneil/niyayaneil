@@ -2,25 +2,31 @@
 import { onMounted, ref, reactive, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormRules, FormInstance } from 'element-plus'
-import { getAircompanyList, addAircompanyApi, editAircompanyApi, patchAircompanyValidApi } from '@/api/Aircompany'
-import type { AircompanyItem, AircompanySearchParams } from '@/types/Aircompany'
+import { getWarehouseList, addWarehouseApi, editWarehouseApi, patchWarehouseValidApi } from '@/api/Warehouse'
+import type { WarehouseItem, WarehouseSearchParams } from '@/types/Warehouse'
 
 onMounted(() => {
   getTableList()
 })
 
 // 搜索
-const form = ref<AircompanySearchParams>({
+const form = ref<WarehouseSearchParams>({
   pageNum: 1,
   pageSize: 30,
-  iataCode: '',
-  airlineNameEn: '',
-  airlineNameCn: '',
-  cargowiseCode: '',
-  unlocode: ''
+  warehouseCode: '',
+  warehouseNameEn: '',
+  warehouseNameCn: '',
+  portCode: '',
+  portRole: '',
+  warehouseType: '',
+  address: '',
+  address2: '',
+  isValid: undefined
 })
 const orderByField = ref('updateTime')
 const orderSortType = ref('descending')
+const loading = ref(false)
+const submitLoading = ref(false)
 // 处理排序变化
 const handleSortChange = ({ prop, order }) => {
   if (!order) {
@@ -36,14 +42,17 @@ const handleSortChange = ({ prop, order }) => {
 
 const getTableList = async () => {
   try {
-    const response = await getAircompanyList(form.value)
+    loading.value = true
+    const response = await getWarehouseList(form.value)
     tableData.value = response.data.list
     total.value = response.data.total
   } catch (error) {
     ElMessage({
       type: 'error',
-      message: 'Failed to get air company list'
+      message: 'Failed to get warehouse list'
     })
+  } finally {
+    loading.value = false
   }
 }
 
@@ -64,19 +73,21 @@ const handlePageNumChange = (val: number) => {
   getTableList()
 }
 
-const tableData = ref<AircompanyItem[]>([])
+const tableData = ref<WarehouseItem[]>([])
 
 // 添加
 const add = () => {
-  titleDialog.value = 'New AirCompany'
+  titleDialog.value = 'New Warehouse'
   ruleForm.value = {
     id: 0,
-    iataCode: '',
-    airlineNameEn: '',
-    airlineNameCn: '',
-    cargowiseCode: '',
-    unlocode: '',
-    airCargoUrl: '',
+    warehouseCode: '',
+    warehouseNameEn: '',
+    warehouseNameCn: '',
+    portCode: '',
+    portRole: '',
+    warehouseType: '',
+    address: '',
+    address2: '',
     createTime: '',
     createUser: '',
     updateTime: '',
@@ -89,8 +100,8 @@ const add = () => {
   visibleDialog.value = true
 }
 
-const edit = (row: AircompanyItem) => {
-  titleDialog.value = 'Edit AirCompany'
+const edit = (row: WarehouseItem) => {
+  titleDialog.value = 'Edit Warehouse'
   visibleDialog.value = true
   nextTick(() => {
     for (let key in ruleForm.value) {
@@ -101,91 +112,60 @@ const edit = (row: AircompanyItem) => {
   })
 }
 
-// 状态切换
-const handleStatusChange = async (row: AircompanyItem, newValue: number) => {
-  const originalValue = newValue === 1 ? 0 : 1
-
-  ElMessageBox.confirm('Please confirm this operation', 'Warning', {
-    confirmButtonText: 'OK',
-    cancelButtonText: 'Cancel',
-    type: 'warning',
-  })
-    .then(async () => {
-      try {
-        await patchAircompanyValidApi(row.id, newValue)
-        ElMessage({ type: 'success', message: 'Status updated successfully' })
-        getTableList()
-      } catch (error) {
-        row.isValid = originalValue
-        ElMessage({ type: 'error', message: 'Update failed' })
-      }
-    })
-    .catch(() => {
-      row.isValid = originalValue
-      ElMessage({ type: 'info', message: 'Operation cancelled' })
-    })
-}
-
 // 弹窗
 const visibleDialog = ref(false)
 const titleDialog = ref('')
 const ruleFormRef = ref<FormInstance>()
-const loading = ref(false)
-const rules = reactive<FormRules<AircompanyItem>>({
-  iataCode: [
+const rules = reactive<FormRules<WarehouseItem>>({
+  warehouseCode: [
     {
       required: true,
       message: 'Required',
       trigger: 'change',
     },
   ],
-  airlineNameEn: [
+  warehouseNameEn: [
     {
       required: true,
       message: 'Required',
       trigger: 'change',
     },
   ],
-  airlineNameCn: [
+  warehouseNameCn: [],
+  portCode: [],
+  portRole: [
+    {
+      required: true,
+      message: 'Please select port role',
+      trigger: 'change',
+    },
+  ],
+  warehouseType: [
+    {
+      required: true,
+      message: 'Please select warehouse type',
+      trigger: 'change',
+    },
+  ],
+  isValid: [
     {
       required: true,
       message: 'Required',
       trigger: 'change',
     },
   ],
-  cargowiseCode: [
-    {
-      required: true,
-      message: 'Required',
-      trigger: 'change',
-    },
-  ],
-  unlocode: [
-    {
-      required: true,
-      message: 'Required',
-      trigger: 'change',
-    },
-  ],
-  airCargoUrl: [
-    {
-      required: true,
-      message: 'Required',
-      trigger: 'change',
-    },
-  ],
-
-
 })
 
-const ruleForm = ref<AircompanyItem>({
+const ruleForm = ref<WarehouseItem>({
   id: 0,
-  iataCode: '',
-  airlineNameEn: '',
-  airlineNameCn: '',
-  cargowiseCode: '',
-  unlocode: '',
-  airCargoUrl: '',
+  warehouseCode: '',
+  warehouseNameEn: '',
+  warehouseNameCn: '',
+  portCode: '',
+  portRole: '',
+  warehouseType: '',
+  address: '',
+  address2: '',
   createTime: '',
   createUser: '',
   updateTime: '',
@@ -193,59 +173,62 @@ const ruleForm = ref<AircompanyItem>({
   isValid: 1
 })
 
-
-
 const submitForm = async (formEl: FormInstance | undefined) => {
   if (!formEl) return
   await formEl.validate((valid, fields) => {
     if (valid) {
-      loading.value = true
       const formCopy = {
         id: ruleForm.value.id,
-        iataCode: ruleForm.value.iataCode,
-        airlineNameEn: ruleForm.value.airlineNameEn,
-        airlineNameCn: ruleForm.value.airlineNameCn,
-        cargowiseCode: ruleForm.value.cargowiseCode,
-        unlocode: ruleForm.value.unlocode,
-        airCargoUrl: ruleForm.value.airCargoUrl,
+        warehouseCode: ruleForm.value.warehouseCode,
+        warehouseNameEn: ruleForm.value.warehouseNameEn,
+        warehouseNameCn: ruleForm.value.warehouseNameCn,
+        portCode: ruleForm.value.portCode,
+        portRole: ruleForm.value.portRole,
+        warehouseType: ruleForm.value.warehouseType,
+        address: ruleForm.value.address,
+        address2: ruleForm.value.address2,
         isValid: ruleForm.value.isValid
       }
-      if (titleDialog.value === 'New AirCompany') {
+      if (titleDialog.value === 'New Warehouse') {
         delete formCopy.id
-        addAircompanyApi(formCopy).then((res) => {
-          if (res.data) {
+        submitLoading.value = true
+        addWarehouseApi(formCopy).then((res) => {
+          if (res.code === 200) {
             getTableList()
             closeDialog()
             ElMessage({
               type: 'success',
-              message: 'Air company added successfully',
+              message: 'Warehouse added successfully',
             })
           }
         }).catch((err) => {
           console.error('Add failed:', err)
           ElMessage({
             type: 'error',
-            message: 'Failed to add air company'
+            message: 'Failed to add warehouse'
           })
         }).finally(() => {
-          loading.value = false
+          submitLoading.value = false
         })
       } else {
-        editAircompanyApi(formCopy).then((res) => {
-          getTableList()
-          closeDialog()
-          ElMessage({
-            type: 'success',
-            message: 'Air company updated successfully',
-          })
+        submitLoading.value = true
+        editWarehouseApi(formCopy).then((res) => {
+          if (res.code === 200) {
+            getTableList()
+            closeDialog()
+            ElMessage({
+              type: 'success',
+              message: 'Warehouse updated successfully',
+            })
+          }
         }).catch((err) => {
           console.error('Edit failed:', err)
           ElMessage({
             type: 'error',
-            message: 'Failed to edit air company'
+            message: 'Failed to edit warehouse'
           })
         }).finally(() => {
-          loading.value = false
+          submitLoading.value = false
         })
       }
     } else {
@@ -259,6 +242,31 @@ const closeDialog = () => {
   nextTick(() => {
     ruleFormRef.value?.resetFields()
   })
+}
+
+// 状态切换
+const handleStatusChange = async (row: WarehouseItem, newValue: number) => {
+  const originalValue = newValue === 1 ? 0 : 1
+  
+  ElMessageBox.confirm('Please confirm this operation', 'Warning', {
+    confirmButtonText: 'OK',
+    cancelButtonText: 'Cancel',
+    type: 'warning',
+  })
+    .then(async () => {
+      try {
+        await patchWarehouseValidApi(row.id, newValue)
+        ElMessage({ type: 'success', message: 'Status updated successfully' })
+        getTableList()
+      } catch (error) {
+        row.isValid = originalValue
+        ElMessage({ type: 'error', message: 'Update failed' })
+      }
+    })
+    .catch(() => {
+      row.isValid = originalValue
+      ElMessage({ type: 'info', message: 'Operation cancelled' })
+    })
 }
 
 const htmlContent = ref(``)
@@ -286,35 +294,31 @@ const htmlContent = ref(``)
             />
           </svg>
         </div>
-        New AirCompany</el-button
+        New Warehouse</el-button
       >
       <el-table
+        v-loading="loading"
         :data="tableData"
         style="width: 100%"
         :default-sort="{ prop: orderByField, order: orderSortType }"
         @sort-change="handleSortChange"
         height="calc(100vh - 240px)"
         stripe
+        empty-text="No data available"
       >
         <el-table-column prop="id" label="#" width="60">
           <template #default="{ $index }">
             <div>{{ indexMethod($index) }}</div>
           </template>
         </el-table-column>
-        <el-table-column prop="airlineNameEn" label="Airline name" min-width="118" show-overflow-tooltip />
-        <el-table-column prop="iataCode" label="Airline code" min-width="118" show-overflow-tooltip />
-        <el-table-column
-          prop="cargowiseCode"
-          label="Airline CW9 code"
-          min-width="142"
-          show-overflow-tooltip
-        />
-        <el-table-column prop="unlocode" label="UN/LOCODE" min-width="118" show-overflow-tooltip />
-        <el-table-column prop="airCargoUrl" label="Website URL" min-width="136" show-overflow-tooltip>
-          <template #default="{ row }">
-            <a :href="row.airCargoUrl" target="_blank">{{ row.airCargoUrl }}</a>
-          </template>
-        </el-table-column>
+        <el-table-column prop="warehouseNameEn" label="Warehouse name (EN)" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="warehouseNameCn" label="Warehouse name (CN)" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="warehouseCode" label="Warehouse code" min-width="118" show-overflow-tooltip />
+        <el-table-column prop="portCode" label="Port Code" min-width="118" show-overflow-tooltip />
+        <el-table-column prop="portRole" label="Port Role" min-width="118" show-overflow-tooltip />
+        <el-table-column prop="warehouseType" label="Warehouse Type" min-width="118" show-overflow-tooltip />
+        <el-table-column prop="address" label="Address" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="address2" label="Address 2" min-width="150" show-overflow-tooltip />
         <el-table-column
           prop="updateUser"
           label="Updater"
@@ -333,7 +337,6 @@ const htmlContent = ref(``)
           </template>
         </el-table-column>
 
-        <!-- 修改：Status 开关列 -->
         <el-table-column prop="isValid" label="Status" width="80">
           <template #default="{ row }">
             <el-switch
@@ -385,7 +388,7 @@ const htmlContent = ref(``)
           v-model:current-page="form.pageNum"
           v-model:page-size="form.pageSize"
           :page-sizes="[30, 50, 100, 200]"
-          layout="sizes, prev, pager, next, jumper"
+          layout="sizes, prev, pager, next"
           :total="total"
           @size-change="handlePageSizeChange"
           @current-change="handlePageNumChange"
@@ -426,40 +429,49 @@ const htmlContent = ref(``)
           label-width="auto"
           class="demo-ruleForm"
         >
-          <el-form-item label="Airline code" prop="iataCode">
-            <el-input placeholder="Enter airline code" v-model.trim="ruleForm.iataCode" />
+          <el-form-item label="Warehouse code" prop="warehouseCode">
+            <el-input placeholder="Enter warehouse code" v-model.trim="ruleForm.warehouseCode" />
           </el-form-item>
 
-          <el-form-item label="Airline name (EN)" prop="airlineNameEn">
-            <el-input placeholder="Enter airline name (EN)" v-model="ruleForm.airlineNameEn" />
+          <el-form-item label="Warehouse name (EN)" prop="warehouseNameEn">
+            <el-input placeholder="Enter warehouse name (EN)" v-model="ruleForm.warehouseNameEn" />
           </el-form-item>
 
-          <el-form-item label="Airline name (CN)" prop="airlineNameCn">
-            <el-input placeholder="Enter airline name (CN)" v-model="ruleForm.airlineNameCn" />
+          <el-form-item label="Warehouse name (CN)" prop="warehouseNameCn">
+            <el-input placeholder="Enter warehouse name (CN)" v-model="ruleForm.warehouseNameCn" />
           </el-form-item>
 
           <el-row :gutter="24">
             <el-col :span="12">
-              <el-form-item label="Airline CW9 code" prop="cargowiseCode">
-                <el-input
-                  placeholder="Enter airline CW9 code"
-                  v-model.trim="ruleForm.cargowiseCode"
-                />
+              <el-form-item label="Port Role" prop="portRole">
+                <el-select v-model="ruleForm.portRole" placeholder="Select port role" style="width: 100%">
+                  <el-option label="POL" value="POL" />
+                  <el-option label="POD" value="POD" />
+                </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="UN/LOCODE" prop="unlocode">
-                <el-input placeholder="Enter UN/LOCODE" v-model.trim="ruleForm.unlocode" />
+              <el-form-item label="Warehouse Type" prop="warehouseType">
+                <el-select v-model="ruleForm.warehouseType" placeholder="Select warehouse type" style="width: 100%">
+                  <el-option label="CFS" value="CFS" />
+                  <el-option label="LCL" value="LCL" />
+                  <el-option label="AIR" value="AIR" />
+                </el-select>
               </el-form-item>
             </el-col>
           </el-row>
-          <el-row :gutter="24">
-            <el-col :span="12">
-              <el-form-item label="Website URL" prop="airCargoUrl">
-                <el-input placeholder="Enter Website URL" v-model.trim="ruleForm.airCargoUrl" />
-              </el-form-item>
-            </el-col>
-          </el-row>
+
+          <el-form-item label="Port Code" prop="portCode">
+            <el-input placeholder="Enter Port Code" v-model.trim="ruleForm.portCode" />
+          </el-form-item>
+
+          <el-form-item label="Address" prop="address">
+            <el-input placeholder="Enter Address" v-model="ruleForm.address" />
+          </el-form-item>
+
+          <el-form-item label="Address 2" prop="address2">
+            <el-input placeholder="Enter Address 2" v-model="ruleForm.address2" />
+          </el-form-item>
 
           <el-form-item label="Status" prop="isValid">
             <el-radio-group v-model="ruleForm.isValid">
@@ -471,7 +483,7 @@ const htmlContent = ref(``)
       </div>
       <template #footer>
         <div class="w-full text-right">
-          <el-button type="primary" class="conBtn" @click="submitForm(ruleFormRef)" :loading="loading">
+          <el-button type="primary" class="conBtn" @click="submitForm(ruleFormRef)" :loading="submitLoading">
             Confirm
           </el-button>
           <el-button class="closeBtn" @click="closeDialog">Close</el-button>

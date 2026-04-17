@@ -2,25 +2,26 @@
 import { onMounted, ref, reactive, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormRules, FormInstance } from 'element-plus'
-import { getAircompanyList, addAircompanyApi, editAircompanyApi, patchAircompanyValidApi } from '@/api/Aircompany'
-import type { AircompanyItem, AircompanySearchParams } from '@/types/Aircompany'
+import { getLclWarehouseFreeTimeList, addLclWarehouseFreeTimeApi, editLclWarehouseFreeTimeApi, patchLclWarehouseFreeTimeValidApi } from '@/api/LclWarehouseFreeTime'
+import type { LclWarehouseFreeTimeItem, LclWarehouseFreeTimeSearchParams } from '@/types/LclWarehouseFreeTime'
 
 onMounted(() => {
   getTableList()
 })
 
 // 搜索
-const form = ref<AircompanySearchParams>({
+const form = ref<LclWarehouseFreeTimeSearchParams>({
   pageNum: 1,
   pageSize: 30,
-  iataCode: '',
-  airlineNameEn: '',
-  airlineNameCn: '',
-  cargowiseCode: '',
-  unlocode: ''
+  warehouseCode: '',
+  portCode: '',
+  serviceProvider: '',
+  isValid: undefined
 })
 const orderByField = ref('updateTime')
 const orderSortType = ref('descending')
+const loading = ref(false)
+const submitLoading = ref(false)
 // 处理排序变化
 const handleSortChange = ({ prop, order }) => {
   if (!order) {
@@ -36,14 +37,17 @@ const handleSortChange = ({ prop, order }) => {
 
 const getTableList = async () => {
   try {
-    const response = await getAircompanyList(form.value)
+    loading.value = true
+    const response = await getLclWarehouseFreeTimeList(form.value)
     tableData.value = response.data.list
     total.value = response.data.total
   } catch (error) {
     ElMessage({
       type: 'error',
-      message: 'Failed to get air company list'
+      message: 'Failed to get LCL warehouse free time list'
     })
+  } finally {
+    loading.value = false
   }
 }
 
@@ -64,19 +68,19 @@ const handlePageNumChange = (val: number) => {
   getTableList()
 }
 
-const tableData = ref<AircompanyItem[]>([])
+const tableData = ref<LclWarehouseFreeTimeItem[]>([])
 
 // 添加
 const add = () => {
-  titleDialog.value = 'New AirCompany'
+  titleDialog.value = 'New LCL Warehouse Free Time'
   ruleForm.value = {
     id: 0,
-    iataCode: '',
-    airlineNameEn: '',
-    airlineNameCn: '',
-    cargowiseCode: '',
-    unlocode: '',
-    airCargoUrl: '',
+    warehouseCode: '',
+    portCode: '',
+    serviceProvider: '',
+    freeDays: 0,
+    freeUnit: 'CD',
+    remarks: '',
     createTime: '',
     createUser: '',
     updateTime: '',
@@ -89,8 +93,8 @@ const add = () => {
   visibleDialog.value = true
 }
 
-const edit = (row: AircompanyItem) => {
-  titleDialog.value = 'Edit AirCompany'
+const edit = (row: LclWarehouseFreeTimeItem) => {
+  titleDialog.value = 'Edit LCL Warehouse Free Time'
   visibleDialog.value = true
   nextTick(() => {
     for (let key in ruleForm.value) {
@@ -101,91 +105,60 @@ const edit = (row: AircompanyItem) => {
   })
 }
 
-// 状态切换
-const handleStatusChange = async (row: AircompanyItem, newValue: number) => {
-  const originalValue = newValue === 1 ? 0 : 1
-
-  ElMessageBox.confirm('Please confirm this operation', 'Warning', {
-    confirmButtonText: 'OK',
-    cancelButtonText: 'Cancel',
-    type: 'warning',
-  })
-    .then(async () => {
-      try {
-        await patchAircompanyValidApi(row.id, newValue)
-        ElMessage({ type: 'success', message: 'Status updated successfully' })
-        getTableList()
-      } catch (error) {
-        row.isValid = originalValue
-        ElMessage({ type: 'error', message: 'Update failed' })
-      }
-    })
-    .catch(() => {
-      row.isValid = originalValue
-      ElMessage({ type: 'info', message: 'Operation cancelled' })
-    })
-}
-
 // 弹窗
 const visibleDialog = ref(false)
 const titleDialog = ref('')
 const ruleFormRef = ref<FormInstance>()
-const loading = ref(false)
-const rules = reactive<FormRules<AircompanyItem>>({
-  iataCode: [
+const rules = reactive<FormRules<LclWarehouseFreeTimeItem>>({
+  warehouseCode: [
     {
       required: true,
       message: 'Required',
       trigger: 'change',
     },
   ],
-  airlineNameEn: [
+  portCode: [
     {
       required: true,
       message: 'Required',
       trigger: 'change',
     },
   ],
-  airlineNameCn: [
+  serviceProvider: [
     {
       required: true,
       message: 'Required',
       trigger: 'change',
     },
   ],
-  cargowiseCode: [
+  freeDays: [
     {
-      required: true,
-      message: 'Required',
+      type: 'number',
+      min: 0,
+      message: 'Free days must be non-negative',
       trigger: 'change',
     },
   ],
-  unlocode: [
-    {
-      required: true,
-      message: 'Required',
-      trigger: 'change',
-    },
-  ],
-  airCargoUrl: [
-    {
-      required: true,
-      message: 'Required',
-      trigger: 'change',
-    },
-  ],
+  freeUnit: [],
 
-
+  remarks: [],
+  isValid: [
+    {
+      required: true,
+      message: 'Required',
+      trigger: 'change',
+    },
+  ],
 })
 
-const ruleForm = ref<AircompanyItem>({
+const ruleForm = ref<LclWarehouseFreeTimeItem>({
   id: 0,
-  iataCode: '',
-  airlineNameEn: '',
-  airlineNameCn: '',
-  cargowiseCode: '',
-  unlocode: '',
-  airCargoUrl: '',
+  warehouseCode: '',
+  portCode: '',
+  serviceProvider: '',
+  freeDays: 0,
+  freeUnit: 'CD',
+  remarks: '',
   createTime: '',
   createUser: '',
   updateTime: '',
@@ -193,59 +166,60 @@ const ruleForm = ref<AircompanyItem>({
   isValid: 1
 })
 
-
-
 const submitForm = async (formEl: FormInstance | undefined) => {
   if (!formEl) return
   await formEl.validate((valid, fields) => {
     if (valid) {
-      loading.value = true
       const formCopy = {
         id: ruleForm.value.id,
-        iataCode: ruleForm.value.iataCode,
-        airlineNameEn: ruleForm.value.airlineNameEn,
-        airlineNameCn: ruleForm.value.airlineNameCn,
-        cargowiseCode: ruleForm.value.cargowiseCode,
-        unlocode: ruleForm.value.unlocode,
-        airCargoUrl: ruleForm.value.airCargoUrl,
+        warehouseCode: ruleForm.value.warehouseCode,
+        portCode: ruleForm.value.portCode,
+        serviceProvider: ruleForm.value.serviceProvider,
+        freeDays: ruleForm.value.freeDays,
+        freeUnit: ruleForm.value.freeUnit,
+        remarks: ruleForm.value.remarks,
         isValid: ruleForm.value.isValid
       }
-      if (titleDialog.value === 'New AirCompany') {
-        delete formCopy.id
-        addAircompanyApi(formCopy).then((res) => {
-          if (res.data) {
+      if (titleDialog.value === 'New LCL Warehouse Free Time') {
+        delete (formCopy as any).id
+        submitLoading.value = true
+        addLclWarehouseFreeTimeApi(formCopy).then((res) => {
+          if (res.code === 200) {
             getTableList()
             closeDialog()
             ElMessage({
               type: 'success',
-              message: 'Air company added successfully',
+              message: 'LCL warehouse free time added successfully',
             })
           }
         }).catch((err) => {
           console.error('Add failed:', err)
           ElMessage({
             type: 'error',
-            message: 'Failed to add air company'
+            message: 'Failed to add LCL warehouse free time'
           })
         }).finally(() => {
-          loading.value = false
+          submitLoading.value = false
         })
       } else {
-        editAircompanyApi(formCopy).then((res) => {
-          getTableList()
-          closeDialog()
-          ElMessage({
-            type: 'success',
-            message: 'Air company updated successfully',
-          })
+        submitLoading.value = true
+        editLclWarehouseFreeTimeApi(formCopy).then((res) => {
+          if (res.code === 200) {
+            getTableList()
+            closeDialog()
+            ElMessage({
+              type: 'success',
+              message: 'LCL warehouse free time updated successfully',
+            })
+          }
         }).catch((err) => {
           console.error('Edit failed:', err)
           ElMessage({
             type: 'error',
-            message: 'Failed to edit air company'
+            message: 'Failed to edit LCL warehouse free time'
           })
         }).finally(() => {
-          loading.value = false
+          submitLoading.value = false
         })
       }
     } else {
@@ -259,6 +233,31 @@ const closeDialog = () => {
   nextTick(() => {
     ruleFormRef.value?.resetFields()
   })
+}
+
+// 状态切换
+const handleStatusChange = async (row: LclWarehouseFreeTimeItem, newValue: number) => {
+  const originalValue = newValue === 1 ? 0 : 1
+  
+  ElMessageBox.confirm('Please confirm this operation', 'Warning', {
+    confirmButtonText: 'OK',
+    cancelButtonText: 'Cancel',
+    type: 'warning',
+  })
+    .then(async () => {
+      try {
+        await patchLclWarehouseFreeTimeValidApi(row.id, newValue)
+        ElMessage({ type: 'success', message: 'Status updated successfully' })
+        getTableList()
+      } catch (error) {
+        row.isValid = originalValue
+        ElMessage({ type: 'error', message: 'Update failed' })
+      }
+    })
+    .catch(() => {
+      row.isValid = originalValue
+      ElMessage({ type: 'info', message: 'Operation cancelled' })
+    })
 }
 
 const htmlContent = ref(``)
@@ -286,35 +285,29 @@ const htmlContent = ref(``)
             />
           </svg>
         </div>
-        New AirCompany</el-button
+        New LCL Warehouse Free Time</el-button
       >
       <el-table
+        v-loading="loading"
         :data="tableData"
         style="width: 100%"
         :default-sort="{ prop: orderByField, order: orderSortType }"
         @sort-change="handleSortChange"
         height="calc(100vh - 240px)"
         stripe
+        empty-text="No data available"
       >
         <el-table-column prop="id" label="#" width="60">
           <template #default="{ $index }">
             <div>{{ indexMethod($index) }}</div>
           </template>
         </el-table-column>
-        <el-table-column prop="airlineNameEn" label="Airline name" min-width="118" show-overflow-tooltip />
-        <el-table-column prop="iataCode" label="Airline code" min-width="118" show-overflow-tooltip />
-        <el-table-column
-          prop="cargowiseCode"
-          label="Airline CW9 code"
-          min-width="142"
-          show-overflow-tooltip
-        />
-        <el-table-column prop="unlocode" label="UN/LOCODE" min-width="118" show-overflow-tooltip />
-        <el-table-column prop="airCargoUrl" label="Website URL" min-width="136" show-overflow-tooltip>
-          <template #default="{ row }">
-            <a :href="row.airCargoUrl" target="_blank">{{ row.airCargoUrl }}</a>
-          </template>
-        </el-table-column>
+        <el-table-column prop="warehouseCode" label="Warehouse code" min-width="118" show-overflow-tooltip />
+        <el-table-column prop="portCode" label="Port Code" min-width="118" show-overflow-tooltip />
+        <el-table-column prop="serviceProvider" label="Service Provider" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="freeDays" label="Free Days" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="freeUnit" label="Free Unit" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="remarks" label="Remarks" min-width="150" show-overflow-tooltip />
         <el-table-column
           prop="updateUser"
           label="Updater"
@@ -333,7 +326,6 @@ const htmlContent = ref(``)
           </template>
         </el-table-column>
 
-        <!-- 修改：Status 开关列 -->
         <el-table-column prop="isValid" label="Status" width="80">
           <template #default="{ row }">
             <el-switch
@@ -385,7 +377,7 @@ const htmlContent = ref(``)
           v-model:current-page="form.pageNum"
           v-model:page-size="form.pageSize"
           :page-sizes="[30, 50, 100, 200]"
-          layout="sizes, prev, pager, next, jumper"
+          layout="sizes, prev, pager, next"
           :total="total"
           @size-change="handlePageSizeChange"
           @current-change="handlePageNumChange"
@@ -426,40 +418,37 @@ const htmlContent = ref(``)
           label-width="auto"
           class="demo-ruleForm"
         >
-          <el-form-item label="Airline code" prop="iataCode">
-            <el-input placeholder="Enter airline code" v-model.trim="ruleForm.iataCode" />
+          <el-form-item label="Warehouse code" prop="warehouseCode">
+            <el-input placeholder="Enter warehouse code" v-model.trim="ruleForm.warehouseCode" />
           </el-form-item>
 
-          <el-form-item label="Airline name (EN)" prop="airlineNameEn">
-            <el-input placeholder="Enter airline name (EN)" v-model="ruleForm.airlineNameEn" />
+          <el-form-item label="Port Code" prop="portCode">
+            <el-input placeholder="Enter port code" v-model.trim="ruleForm.portCode" />
           </el-form-item>
 
-          <el-form-item label="Airline name (CN)" prop="airlineNameCn">
-            <el-input placeholder="Enter airline name (CN)" v-model="ruleForm.airlineNameCn" />
+          <el-form-item label="Service Provider" prop="serviceProvider">
+            <el-input placeholder="Enter service provider" v-model.trim="ruleForm.serviceProvider" />
           </el-form-item>
 
           <el-row :gutter="24">
             <el-col :span="12">
-              <el-form-item label="Airline CW9 code" prop="cargowiseCode">
-                <el-input
-                  placeholder="Enter airline CW9 code"
-                  v-model.trim="ruleForm.cargowiseCode"
-                />
+              <el-form-item label="Free Days" prop="freeDays">
+                <el-input type="number" placeholder="Enter free days" v-model.number="ruleForm.freeDays" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="UN/LOCODE" prop="unlocode">
-                <el-input placeholder="Enter UN/LOCODE" v-model.trim="ruleForm.unlocode" />
+              <el-form-item label="Free Unit" prop="freeUnit">
+                <el-select v-model="ruleForm.freeUnit" placeholder="Select free unit" style="width: 100%">
+                  <el-option label="CD" value="CD" />
+                  <el-option label="WD" value="WD" />
+                </el-select>
               </el-form-item>
             </el-col>
           </el-row>
-          <el-row :gutter="24">
-            <el-col :span="12">
-              <el-form-item label="Website URL" prop="airCargoUrl">
-                <el-input placeholder="Enter Website URL" v-model.trim="ruleForm.airCargoUrl" />
-              </el-form-item>
-            </el-col>
-          </el-row>
+
+          <el-form-item label="Remarks" prop="remarks">
+            <el-input type="textarea" placeholder="Enter remarks" v-model="ruleForm.remarks" rows="3" />
+          </el-form-item>
 
           <el-form-item label="Status" prop="isValid">
             <el-radio-group v-model="ruleForm.isValid">
@@ -471,7 +460,7 @@ const htmlContent = ref(``)
       </div>
       <template #footer>
         <div class="w-full text-right">
-          <el-button type="primary" class="conBtn" @click="submitForm(ruleFormRef)" :loading="loading">
+          <el-button type="primary" class="conBtn" @click="submitForm(ruleFormRef)" :loading="submitLoading">
             Confirm
           </el-button>
           <el-button class="closeBtn" @click="closeDialog">Close</el-button>

@@ -18,6 +18,8 @@ const router = createRouter({
       {        path: 'Aircompany',        component: () => import('@/views/Aircompany/Aircompany.vue'),        meta: { parTitle: 'Sea Data', title: 'AirCompany' }      },
       {        path: 'Railcompany',        component: () => import('@/views/Railcompany/Railcompany.vue'),        meta: { parTitle: 'Sea Data', title: 'RailCompany' }      },
       {        path: 'Truckcompany',        component: () => import('@/views/Truckcompany/Truckcompany.vue'),        meta: { parTitle: 'Sea Data', title: 'TruckCompany' }      },
+      {        path: 'Warehouse',        component: () => import('@/views/Warehouse/Warehouse.vue'),        meta: { parTitle: 'Sea Data', title: 'Warehouse' }      },
+      {        path: 'LclWarehouseFreeTime',        component: () => import('@/views/LclWarehouseFreeTime/LclWarehouseFreeTime.vue'),        meta: { parTitle: 'Sea Data', title: 'LCL Warehouse Free Time' }      },
       {
         path: 'SupplierManagement',
         component: () => import('@/views/SupplierManagement/SupplierManagement.vue'),
