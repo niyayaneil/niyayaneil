@@ -4,10 +4,132 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormRules, FormInstance } from 'element-plus'
 import { getWarehouseList, addWarehouseApi, editWarehouseApi, patchWarehouseValidApi } from '@/api/Warehouse'
 import type { WarehouseItem, WarehouseSearchParams } from '@/types/Warehouse'
+import { getOptionsListApi } from '@/api/Public'
+
+// 缓存相关配置
+const CACHE_KEY = 'port_list_cache'
+const CACHE_VALID_KEY = 'port_list_valid_cache'
+const CACHE_EXPIRY = 24 * 60 * 60 * 1000 // 24小时
+
+// 检查缓存是否有效
+const isCacheValid = (cacheKey: string): boolean => {
+  const cached = localStorage.getItem(cacheKey)
+  if (!cached) return false
+  try {
+    const parsed = JSON.parse(cached)
+    return Date.now() - parsed.timestamp < CACHE_EXPIRY
+  } catch (e) {
+    return false
+  }
+}
+
+// 从缓存获取数据
+const getFromCache = (cacheKey: string): { label: string; value: string | number }[] => {
+  const cached = localStorage.getItem(cacheKey)
+  if (!cached) return []
+  try {
+    const parsed = JSON.parse(cached)
+    return parsed.data || []
+  } catch (e) {
+    return []
+  }
+}
+
+// 保存数据到缓存
+const saveToCache = (cacheKey: string, data: { label: string; value: string | number }[]) => {
+  try {
+    localStorage.setItem(cacheKey, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }))
+  } catch (e) {
+    console.error('Failed to save to cache:', e)
+  }
+}
 
 onMounted(() => {
   getTableList()
+  // 获取港口列表（带缓存和请求优化）
+  if (isCacheValid(CACHE_KEY)) {
+    portList.value = getFromCache(CACHE_KEY)
+  } else {
+    // 添加超时和错误处理
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 3000) // 3秒超时
+    
+    getOptionsListApi({ globalPorts: {} }, { signal: controller.signal })
+      .then((res: any) => {
+        clearTimeout(timeoutId)
+        if (res.data && res.data.globalPorts && res.data.globalPorts.length > 0) {
+          portList.value = res.data.globalPorts
+          saveToCache(CACHE_KEY, res.data.globalPorts)
+        }
+      })
+      .catch((error) => {
+        clearTimeout(timeoutId)
+        if (error.name === 'AbortError') {
+          console.log('Port list request timeout')
+          // 使用缓存数据作为 fallback
+          if (getFromCache(CACHE_KEY).length > 0) {
+            portList.value = getFromCache(CACHE_KEY)
+          }
+        } else {
+          console.error('Error fetching port list:', error)
+        }
+      })
+  }
+  
+  // 获取有效港口列表（带缓存和请求优化）
+  if (isCacheValid(CACHE_VALID_KEY)) {
+    portListValid.value = getFromCache(CACHE_VALID_KEY)
+  } else {
+    // 添加超时和错误处理
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 3000) // 3秒超时
+    
+    getOptionsListApi({ globalPorts: { isValid: '1' } }, { signal: controller.signal })
+      .then((res: any) => {
+        clearTimeout(timeoutId)
+        if (res.data && res.data.globalPorts && res.data.globalPorts.length > 0) {
+          portListValid.value = res.data.globalPorts
+          saveToCache(CACHE_VALID_KEY, res.data.globalPorts)
+        }
+      })
+      .catch((error) => {
+        clearTimeout(timeoutId)
+        if (error.name === 'AbortError') {
+          console.log('Valid port list request timeout')
+          // 使用缓存数据作为 fallback
+          if (getFromCache(CACHE_VALID_KEY).length > 0) {
+            portListValid.value = getFromCache(CACHE_VALID_KEY)
+          }
+        } else {
+          console.error('Error fetching valid port list:', error)
+        }
+      })
+  }
 })
+
+const portList = ref<{ label: string; value: string | number }[]>([])
+const portListValid = ref<{ label: string; value: string | number }[]>([])
+
+const onSearch = () => {
+  form.value.pageNum = 1
+  getTableList()
+}
+const onReset = () => {
+  form.value.warehouseNameEn = ''
+  form.value.warehouseCode = ''
+  form.value.portCode = ''
+  form.value.portRole = ''
+  form.value.warehouseType = ''
+  form.value.address = ''
+  form.value.address2 = ''
+  form.value.isValid = undefined
+  form.value.pageNum = 1
+  form.value.pageSize = 30
+  getTableList()
+}
 
 // 搜索
 const form = ref<WarehouseSearchParams>({
@@ -275,27 +397,72 @@ const htmlContent = ref(``)
 <template>
   <div class="mt-[3px]">
     <div class="p-[24px] bg-white">
-      <el-button
-        @click="add"
-        class="flex h-[33px] text-[#fff] mb-[12px] text-[14px] px-4 justify-center items-center gap-6 rounded-[4px] bg-[#2D8AE0]"
-        ><div class="w-[14px] h-[14px] mr-[8px]">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="14"
-            height="14"
-            viewBox="0 0 14 14"
-            fill="none"
-          >
-            <path
-              fill-rule="evenodd"
-              clip-rule="evenodd"
-              d="M7 1.3125C6.75838 1.3125 6.5625 1.50838 6.5625 1.75V6.5625H1.75C1.50838 6.5625 1.3125 6.75838 1.3125 7C1.3125 7.24162 1.50838 7.4375 1.75 7.4375H6.5625V12.25C6.5625 12.4916 6.75838 12.6875 7 12.6875C7.24162 12.6875 7.4375 12.4916 7.4375 12.25V7.4375H12.25C12.4916 7.4375 12.6875 7.24162 12.6875 7C12.6875 6.75838 12.4916 6.5625 12.25 6.5625H7.4375V1.75C7.4375 1.50838 7.24162 1.3125 7 1.3125Z"
-              fill="white"
-            />
-          </svg>
-        </div>
-        New Warehouse</el-button
+      <el-form
+        :inline="true"
+        :model="form"
+        ref="ruleFormRef"
+        class="demo-form-inline"
+        label-position="right"
+        label-width="auto"
       >
+        <el-form-item label="Warehouse name (EN)" prop="warehouseNameEn">
+          <el-input v-model="form.warehouseNameEn" placeholder="Input" clearable />
+        </el-form-item>
+        <el-form-item label="Warehouse code" prop="warehouseCode">
+          <el-input v-model="form.warehouseCode" placeholder="Input" clearable />
+        </el-form-item>
+        <el-form-item label="Port" prop="portCode">
+          <el-select v-model="form.portCode" filterable placeholder="Select Port" clearable style="width: 150px" virtual :max-height="300">
+            <el-option
+              v-for="item in portList"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            >
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Port Role" prop="portRole">
+          <el-select v-model="form.portRole" clearable placeholder="Select port role" style="width: 150px">
+            <el-option label="POL" value="POL" />
+            <el-option label="POD" value="POD" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Warehouse Type" prop="warehouseType">
+          <el-select v-model="form.warehouseType" clearable placeholder="Select warehouse type" style="width: 150px">
+            <el-option label="CFS" value="CFS" />
+            <el-option label="LCL" value="LCL" />
+            <el-option label="AIR" value="AIR" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="onSearch" class="bg-[#2D8AE0]">Search</el-button>
+          <el-button @click="onReset">Reset</el-button>
+        </el-form-item>
+      </el-form>
+      <div class="flex">
+        <el-button
+          @click="add"
+          class="flex h-[33px] text-[#fff] mb-[12px] text-[14px] px-4 justify-center items-center gap-6 rounded-[4px] bg-[#2D8AE0]"
+          ><div class="w-[14px] h-[14px] mr-[8px]">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+            >
+              <path
+                fill-rule="evenodd"
+                clip-rule="evenodd"
+                d="M7 1.3125C6.75838 1.3125 6.5625 1.50838 6.5625 1.75V6.5625H1.75C1.50838 6.5625 1.3125 6.75838 1.3125 7C1.3125 7.24162 1.50838 7.4375 1.75 7.4375H6.5625V12.25C6.5625 12.4916 6.75838 12.6875 7 12.6875C7.24162 12.6875 7.4375 12.4916 7.4375 12.25V7.4375H12.25C12.4916 7.4375 12.6875 7.24162 12.6875 7C12.6875 6.75838 12.4916 6.5625 12.25 6.5625H7.4375V1.75C7.4375 1.50838 7.24162 1.3125 7 1.3125Z"
+                fill="white"
+              />
+            </svg>
+          </div>
+          New Warehouse</el-button
+        >
+      </div>
       <el-table
         v-loading="loading"
         :data="tableData"
@@ -462,7 +629,15 @@ const htmlContent = ref(``)
           </el-row>
 
           <el-form-item label="Port Code" prop="portCode">
-            <el-input placeholder="Enter Port Code" v-model.trim="ruleForm.portCode" />
+            <el-select v-model="ruleForm.portCode" filterable placeholder="Select Port Code" clearable style="width: 100%" virtual :max-height="300">
+              <el-option
+                v-for="item in portListValid"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              >
+              </el-option>
+            </el-select>
           </el-form-item>
 
           <el-form-item label="Address" prop="address">

@@ -2,127 +2,41 @@
 import { onMounted, ref, reactive, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormRules, FormInstance } from 'element-plus'
-import { getLclWarehouseFreeTimeList, addLclWarehouseFreeTimeApi, editLclWarehouseFreeTimeApi, patchLclWarehouseFreeTimeValidApi } from '@/api/LclWarehouseFreeTime'
-import type { LclWarehouseFreeTimeItem, LclWarehouseFreeTimeSearchParams } from '@/types/LclWarehouseFreeTime'
+import { getFclOutsideFreeTimeList, addFclOutsideFreeTimeApi, editFclOutsideFreeTimeApi, patchFclOutsideFreeTimeValidApi } from '@/api/FclOutsideFreeTime'
 import { getOptionsListApi } from '@/api/Public'
-
-// 缓存相关配置
-const CACHE_KEY = 'port_list_cache'
-const CACHE_VALID_KEY = 'port_list_valid_cache'
-const CACHE_EXPIRY = 24 * 60 * 60 * 1000 // 24小时
-
-// 检查缓存是否有效
-const isCacheValid = (cacheKey: string): boolean => {
-  const cached = localStorage.getItem(cacheKey)
-  if (!cached) return false
-  try {
-    const parsed = JSON.parse(cached)
-    return Date.now() - parsed.timestamp < CACHE_EXPIRY
-  } catch (e) {
-    return false
-  }
-}
-
-// 从缓存获取数据
-const getFromCache = (cacheKey: string): { label: string; value: string | number }[] => {
-  const cached = localStorage.getItem(cacheKey)
-  if (!cached) return []
-  try {
-    const parsed = JSON.parse(cached)
-    return parsed.data || []
-  } catch (e) {
-    return []
-  }
-}
-
-// 保存数据到缓存
-const saveToCache = (cacheKey: string, data: { label: string; value: string | number }[]) => {
-  try {
-    localStorage.setItem(cacheKey, JSON.stringify({
-      data,
-      timestamp: Date.now()
-    }))
-  } catch (e) {
-    console.error('Failed to save to cache:', e)
-  }
-}
-
-const portList = ref<{ label: string; value: string | number }[]>([])
-const portListValid = ref<{ label: string; value: string | number }[]>([])
+import type { FclOutsideFreeTimeItem, FclOutsideFreeTimeSearchParams } from '@/types/FclOutsideFreeTime'
 
 onMounted(() => {
   getTableList()
-  // 获取港口列表（带缓存和请求优化）
-  if (isCacheValid(CACHE_KEY)) {
-    portList.value = getFromCache(CACHE_KEY)
-  } else {
-    // 添加超时和错误处理
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 3000) // 3秒超时
-    
-    getOptionsListApi({ globalPorts: {} }, { signal: controller.signal })
-      .then((res: any) => {
-        clearTimeout(timeoutId)
-        if (res.data && res.data.globalPorts && res.data.globalPorts.length > 0) {
-          portList.value = res.data.globalPorts
-          saveToCache(CACHE_KEY, res.data.globalPorts)
-        }
-      })
-      .catch((error) => {
-        clearTimeout(timeoutId)
-        if (error.name === 'AbortError') {
-          console.log('Port list request timeout')
-          // 使用缓存数据作为 fallback
-          if (getFromCache(CACHE_KEY).length > 0) {
-            portList.value = getFromCache(CACHE_KEY)
-          }
-        } else {
-          console.error('Error fetching port list:', error)
-        }
-      })
-  }
-  
-  // 获取有效港口列表（带缓存和请求优化）
-  if (isCacheValid(CACHE_VALID_KEY)) {
-    portListValid.value = getFromCache(CACHE_VALID_KEY)
-  } else {
-    // 添加超时和错误处理
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 3000) // 3秒超时
-    
-    getOptionsListApi({ globalPorts: { isValid: '1' } }, { signal: controller.signal })
-      .then((res: any) => {
-        clearTimeout(timeoutId)
-        if (res.data && res.data.globalPorts && res.data.globalPorts.length > 0) {
-          portListValid.value = res.data.globalPorts
-          saveToCache(CACHE_VALID_KEY, res.data.globalPorts)
-        }
-      })
-      .catch((error) => {
-        clearTimeout(timeoutId)
-        if (error.name === 'AbortError') {
-          console.log('Valid port list request timeout')
-          // 使用缓存数据作为 fallback
-          if (getFromCache(CACHE_VALID_KEY).length > 0) {
-            portListValid.value = getFromCache(CACHE_VALID_KEY)
-          }
-        } else {
-          console.error('Error fetching valid port list:', error)
-        }
-      })
-  }
+  getOptionsListApi({ carriers: {} }).then((res: any) => {
+    if (res.data.carriers.length > 0) {
+      carrierList.value = res.data.carriers
+    }
+  })
+  getOptionsListApi({ carriers: { isValid: '1' } }).then((res: any) => {
+    if (res.data.carriers.length > 0) {
+      carrierListValid.value = res.data.carriers
+    }
+  })
 })
+
+const carrierList = ref<{ label: string; value: string | number }[]>([])
+const carrierListValid = ref<{ label: string; value: string | number }[]>([])
 
 const onSearch = () => {
   form.value.pageNum = 1
   getTableList()
 }
 const onReset = () => {
-  form.value.warehouseCode = ''
-  form.value.portCode = ''
-  form.value.serviceProvider = ''
-  form.value.validFrom = ''
-  form.value.validTo = ''
+  form.value.carrierCode = ''
+  form.value.tradeLane = ''
+  form.value.contractType = ''
+  form.value.businessType = ''
+  form.value.containerType = ''
+  form.value.route = ''
+  form.value.podType = ''
+  form.value.pod = ''
+  form.value.ddType = ''
   form.value.isValid = undefined
   form.value.pageNum = 1
   form.value.pageSize = 30
@@ -130,53 +44,34 @@ const onReset = () => {
 }
 
 // 搜索
-const form = ref({
+const form = ref<FclOutsideFreeTimeSearchParams>({
   pageNum: 1,
   pageSize: 30,
-  warehouseCode: '',
-  portCode: '',
-  serviceProvider: '',
-  validFrom: '',
-  validTo: '',
+  customerName: '',
+  carrierCode: '',
+  tradeLane: '',
+  contractType: '',
+  businessType: '',
+  containerType: '',
+  route: '',
+  podType: '',
+  pod: '',
+  ddType: '',
   isValid: undefined
 })
-const orderByField = ref('updateTime')
-const orderSortType = ref('descending')
 const loading = ref(false)
 const submitLoading = ref(false)
-// 处理排序变化
-const handleSortChange = ({ prop, order }) => {
-  if (!order) {
-    orderByField.value = ''
-    orderSortType.value = ''
-    getTableList()
-  } else {
-    orderByField.value = prop
-    orderSortType.value = order === 'ascending' ? 'asc' : 'desc'
-    getTableList()
-  }
-}
 
 const getTableList = async () => {
   try {
     loading.value = true
-    const params = {
-      pageNum: form.value.pageNum,
-      pageSize: form.value.pageSize,
-      warehouseCode: form.value.warehouseCode,
-      portCode: form.value.portCode,
-      serviceProvider: form.value.serviceProvider,
-      validFrom: form.value.validFrom,
-      validTo: form.value.validTo,
-      isValid: form.value.isValid
-    }
-    const response = await getLclWarehouseFreeTimeList(params)
+    const response = await getFclOutsideFreeTimeList(form.value)
     tableData.value = response.data.list
     total.value = response.data.total
   } catch (error) {
     ElMessage({
       type: 'error',
-      message: 'Failed to get LCL warehouse free time list'
+      message: 'Failed to get FCL outside free time list'
     })
   } finally {
     loading.value = false
@@ -200,21 +95,26 @@ const handlePageNumChange = (val: number) => {
   getTableList()
 }
 
-const tableData = ref<LclWarehouseFreeTimeItem[]>([])
+const tableData = ref<FclOutsideFreeTimeItem[]>([])
 
 // 添加
 const add = () => {
-  titleDialog.value = 'New LCL Warehouse Free Time'
+  titleDialog.value = 'New FCL Outside Free Time'
   ruleForm.value = {
     id: 0,
-    warehouseCode: '',
-    portCode: '',
-    serviceProvider: '',
+    customerName: '',
+    carrierCode: '',
+    tradeLane: '',
+    contractType: '',
+    businessType: '',
+    containerType: '',
+    route: '',
+    podType: '',
+    pod: '',
+    ddType: '',
     freeDays: undefined,
     freeUnit: '',
     remarks: '',
-    validFrom: '',
-    validTo: '',
     createTime: '',
     createUser: '',
     updateTime: '',
@@ -227,8 +127,8 @@ const add = () => {
   visibleDialog.value = true
 }
 
-const edit = (row: LclWarehouseFreeTimeItem) => {
-  titleDialog.value = 'Edit LCL Warehouse Free Time'
+const edit = (row: FclOutsideFreeTimeItem) => {
+  titleDialog.value = 'Edit FCL Outside Free Time'
   visibleDialog.value = true
   nextTick(() => {
     for (let key in ruleForm.value) {
@@ -243,22 +143,59 @@ const edit = (row: LclWarehouseFreeTimeItem) => {
 const visibleDialog = ref(false)
 const titleDialog = ref('')
 const ruleFormRef = ref<FormInstance>()
-const rules = reactive<FormRules<LclWarehouseFreeTimeItem>>({
-  warehouseCode: [
+const rules = reactive<FormRules<FclOutsideFreeTimeItem>>({
+  customerName: [
     {
       required: true,
       message: 'Required',
       trigger: 'change',
     },
   ],
-  portCode: [
+  carrierCode: [
     {
       required: true,
       message: 'Required',
       trigger: 'change',
     },
   ],
-  serviceProvider: [
+  tradeLane: [
+    {
+      required: true,
+      message: 'Required',
+      trigger: 'change',
+    },
+  ],
+  contractType: [
+    {
+      required: true,
+      message: 'Required',
+      trigger: 'change',
+    },
+  ],
+  businessType: [
+    {
+      required: true,
+      message: 'Required',
+      trigger: 'change',
+    },
+  ],
+  containerType: [
+    {
+      required: true,
+      message: 'Required',
+      trigger: 'change',
+    },
+  ],
+  route: [],
+  podType: [
+    {
+      required: true,
+      message: 'Required',
+      trigger: 'change',
+    },
+  ],
+  pod: [],
+  ddType: [
     {
       required: true,
       message: 'Required',
@@ -284,16 +221,21 @@ const rules = reactive<FormRules<LclWarehouseFreeTimeItem>>({
   ],
 })
 
-const ruleForm = ref<LclWarehouseFreeTimeItem>({
+const ruleForm = ref<FclOutsideFreeTimeItem>({
   id: 0,
-  warehouseCode: '',
-  portCode: '',
-  serviceProvider: '',
+  customerName: '',
+  carrierCode: '',
+  tradeLane: '',
+  contractType: '',
+  businessType: '',
+  containerType: '',
+  route: '',
+  podType: '',
+  pod: '',
+  ddType: '',
   freeDays: undefined,
   freeUnit: '',
   remarks: '',
-  validFrom: '',
-  validTo: '',
   createTime: '',
   createUser: '',
   updateTime: '',
@@ -305,59 +247,60 @@ const submitForm = async (formEl: FormInstance | undefined) => {
   if (!formEl) return
   await formEl.validate((valid, fields) => {
     if (valid) {
-      const formatDate = (dateString: string) => {
-        if (!dateString) return ''
-        return dateString.split('T')[0]
-      }
       const formCopy = {
         id: ruleForm.value.id,
-        warehouseCode: ruleForm.value.warehouseCode,
-        portCode: ruleForm.value.portCode,
-        serviceProvider: ruleForm.value.serviceProvider,
+        customerName: ruleForm.value.customerName,
+        carrierCode: ruleForm.value.carrierCode,
+        tradeLane: ruleForm.value.tradeLane,
+        contractType: ruleForm.value.contractType,
+        businessType: ruleForm.value.businessType,
+        containerType: ruleForm.value.containerType,
+        route: ruleForm.value.route,
+        podType: ruleForm.value.podType,
+        pod: ruleForm.value.pod,
+        ddType: ruleForm.value.ddType,
         freeDays: ruleForm.value.freeDays,
         freeUnit: ruleForm.value.freeUnit,
         remarks: ruleForm.value.remarks,
-        validFrom: formatDate(ruleForm.value.validFrom),
-        validTo: formatDate(ruleForm.value.validTo),
         isValid: ruleForm.value.isValid
       }
-      if (titleDialog.value === 'New LCL Warehouse Free Time') {
+      if (titleDialog.value === 'New FCL Outside Free Time') {
         delete (formCopy as any).id
         submitLoading.value = true
-        addLclWarehouseFreeTimeApi(formCopy).then((res) => {
+        addFclOutsideFreeTimeApi(formCopy).then((res) => {
           if (res.code === 200) {
             getTableList()
             closeDialog()
             ElMessage({
               type: 'success',
-              message: 'LCL warehouse free time added successfully',
+              message: 'FCL outside free time added successfully',
             })
           }
         }).catch((err) => {
           console.error('Add failed:', err)
           ElMessage({
             type: 'error',
-            message: 'Failed to add LCL warehouse free time'
+            message: 'Failed to add FCL outside free time'
           })
         }).finally(() => {
           submitLoading.value = false
         })
       } else {
         submitLoading.value = true
-        editLclWarehouseFreeTimeApi(formCopy).then((res) => {
+        editFclOutsideFreeTimeApi(formCopy).then((res) => {
           if (res.code === 200) {
             getTableList()
             closeDialog()
             ElMessage({
               type: 'success',
-              message: 'LCL warehouse free time updated successfully',
+              message: 'FCL outside free time updated successfully',
             })
           }
         }).catch((err) => {
           console.error('Edit failed:', err)
           ElMessage({
             type: 'error',
-            message: 'Failed to edit LCL warehouse free time'
+            message: 'Failed to edit FCL outside free time'
           })
         }).finally(() => {
           submitLoading.value = false
@@ -377,7 +320,7 @@ const closeDialog = () => {
 }
 
 // 状态切换
-const handleStatusChange = async (row: LclWarehouseFreeTimeItem, newValue: number) => {
+const handleStatusChange = async (row: FclOutsideFreeTimeItem, newValue: number) => {
   const originalValue = newValue === 1 ? 0 : 1
   
   ElMessageBox.confirm('Please confirm this operation', 'Warning', {
@@ -387,7 +330,7 @@ const handleStatusChange = async (row: LclWarehouseFreeTimeItem, newValue: numbe
   })
     .then(async () => {
       try {
-        await patchLclWarehouseFreeTimeValidApi(row.id, newValue)
+        await patchFclOutsideFreeTimeValidApi(row.id, newValue)
         ElMessage({ type: 'success', message: 'Status updated successfully' })
         getTableList()
       } catch (error) {
@@ -415,13 +358,10 @@ const htmlContent = ref(``)
         label-position="right"
         label-width="auto"
       >
-        <el-form-item label="Warehouse code" prop="warehouseCode">
-          <el-input v-model="form.warehouseCode" placeholder="Input" clearable />
-        </el-form-item>
-        <el-form-item label="Port" prop="portCode">
-          <el-select v-model="form.portCode" filterable placeholder="Select Port" clearable style="width: 150px" virtual :max-height="300">
+        <el-form-item label="Carrie" prop="carrierCode">
+          <el-select v-model="form.carrierCode" filterable placeholder="Select Carrier Code" clearable style="width: 150px">
             <el-option
-              v-for="item in portList"
+              v-for="item in carrierList"
               :key="item.value"
               :label="item.label"
               :value="item.value"
@@ -429,28 +369,56 @@ const htmlContent = ref(``)
             </el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="Service Provider" prop="serviceProvider">
-          <el-input v-model="form.serviceProvider" placeholder="Input" clearable />
+        <el-form-item label="Trade Lane" prop="tradeLane">
+          <el-select v-model="form.tradeLane" clearable placeholder="Select Trade Lane" style="width: 150px">
+            <el-option label="US" value="US" />
+            <el-option label="CA" value="CA" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="Valid From" prop="validFrom">
-          <el-date-picker 
-            v-model="form.validFrom" 
-            type="date" 
-            value-format="YYYY-MM-DD"
-            placeholder="Select start date" 
-            clearable 
-            style="width: 200px" 
-          />
+        <el-form-item label="Contract Type" prop="contractType">
+          <el-select v-model="form.contractType" clearable placeholder="Select Contract Type" style="width: 150px">
+            <el-option label="FAK" value="FAK" />
+            <el-option label="FIX" value="FIX" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="Valid To" prop="validTo">
-          <el-date-picker 
-            v-model="form.validTo" 
-            type="date" 
-            value-format="YYYY-MM-DD"
-            placeholder="Select end date" 
-            clearable 
-            style="width: 200px" 
-          />
+        <el-form-item label="Business Type" prop="businessType">
+          <el-select v-model="form.businessType" clearable placeholder="Select Business Type" style="width: 150px">
+            <el-option label="BASE" value="BASE" />
+            <el-option label="IPI" value="IPI" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Container Type" prop="containerType">
+          <el-select v-model="form.containerType" clearable placeholder="Select Container Type" style="width: 150px">
+            <el-option label="20GP" value="20GP" />
+            <el-option label="40GP" value="40GP" />
+            <el-option label="40HQ" value="40HQ" />
+            <el-option label="45HQ" value="45HQ" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <el-form
+        :inline="true"
+        :model="form"
+        ref="ruleFormRef"
+        class="demo-form-inline"
+        label-position="right"
+        label-width="auto"
+      >
+        <el-form-item label="Route" prop="route">
+          <el-select v-model="form.route" clearable placeholder="Select Route" style="width: 150px">
+            <el-option label="USEC" value="USEC" />
+            <el-option label="USWC" value="USWC" />
+            <el-option label="USGC" value="USGC" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="POD Type" prop="podType">
+          <el-select v-model="form.podType" clearable placeholder="Select POD Type" style="width: 150px">
+            <el-option label="REGION" value="REGION" />
+            <el-option label="PORT" value="PORT" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="POD" prop="pod">
+          <el-input v-model="form.pod" placeholder="Input" clearable />
         </el-form-item>
         <el-form-item label="Status" prop="isValid">
           <el-select v-model="form.isValid" clearable placeholder="Please Select">
@@ -483,15 +451,13 @@ const htmlContent = ref(``)
               />
             </svg>
           </div>
-          New LCL Warehouse Free Time</el-button
+          New FCL Outside Free Time</el-button
         >
       </div>
       <el-table
         v-loading="loading"
         :data="tableData"
         style="width: 100%"
-        :default-sort="{ prop: orderByField, order: orderSortType }"
-        @sort-change="handleSortChange"
         height="calc(100vh - 240px)"
         stripe
         empty-text="No data available"
@@ -501,14 +467,19 @@ const htmlContent = ref(``)
             <div>{{ indexMethod($index) }}</div>
           </template>
         </el-table-column>
-        <el-table-column prop="warehouseCode" label="Warehouse code" min-width="118" show-overflow-tooltip />
-        <el-table-column prop="portCode" label="Port Code" min-width="118" show-overflow-tooltip />
-        <el-table-column prop="serviceProvider" label="Service Provider" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="customerName" label="Customer Name" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="carrierCode" label="Carrie" min-width="118" show-overflow-tooltip />
+        <el-table-column prop="tradeLane" label="Trade Lane" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="contractType" label="Contract Type" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="businessType" label="Business Type" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="containerType" label="Container Type" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="route" label="Route" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="podType" label="POD Type" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="pod" label="POD" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="ddType" label="DD Type" min-width="100" show-overflow-tooltip />
         <el-table-column prop="freeDays" label="Free Days" min-width="100" show-overflow-tooltip />
         <el-table-column prop="freeUnit" label="Free Unit" min-width="100" show-overflow-tooltip />
         <el-table-column prop="remarks" label="Remarks" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="validFrom" label="Valid From" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="validTo" label="Valid To" min-width="150" show-overflow-tooltip />
         <el-table-column
           prop="updateUser"
           label="Updater"
@@ -517,7 +488,6 @@ const htmlContent = ref(``)
         />
         <el-table-column
           prop="updateTime"
-          sortable
           label="Update Time"
           width="156"
           show-overflow-tooltip
@@ -619,14 +589,14 @@ const htmlContent = ref(``)
           label-width="auto"
           class="demo-ruleForm"
         >
-          <el-form-item label="Warehouse code" prop="warehouseCode">
-            <el-input placeholder="Enter warehouse code" v-model.trim="ruleForm.warehouseCode" />
+          <el-form-item label="Customer Name" prop="customerName">
+            <el-input placeholder="Enter customer name" v-model.trim="ruleForm.customerName" />
           </el-form-item>
 
-          <el-form-item label="Port" prop="portCode">
-            <el-select v-model="ruleForm.portCode" filterable placeholder="Select Port" clearable style="width: 100%" virtual :max-height="300">
+          <el-form-item label="Carrie" prop="carrierCode">
+            <el-select v-model="ruleForm.carrierCode" filterable placeholder="Select Carrier Code" clearable style="width: 100%">
               <el-option
-                v-for="item in portListValid"
+                v-for="item in carrierListValid"
                 :key="item.value"
                 :label="item.label"
                 :value="item.value"
@@ -635,8 +605,18 @@ const htmlContent = ref(``)
             </el-select>
           </el-form-item>
 
-          <el-form-item label="Service Provider" prop="serviceProvider">
-            <el-input placeholder="Enter service provider" v-model.trim="ruleForm.serviceProvider" />
+          <el-form-item label="Trade Lane" prop="tradeLane">
+            <el-select v-model="ruleForm.tradeLane" placeholder="Select Trade Lane" style="width: 100%">
+              <el-option label="US" value="US" />
+              <el-option label="CA" value="CA" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="Contract Type" prop="contractType">
+            <el-select v-model="ruleForm.contractType" placeholder="Select Contract Type" style="width: 100%">
+              <el-option label="FAK" value="FAK" />
+              <el-option label="FIX" value="FIX" />
+            </el-select>
           </el-form-item>
 
           <el-row :gutter="24">
@@ -655,34 +635,50 @@ const htmlContent = ref(``)
             </el-col>
           </el-row>
 
-          <el-row :gutter="24">
-            <el-col :span="12">
-              <el-form-item label="Valid From" prop="validFrom">
-                <el-date-picker 
-                  v-model="ruleForm.validFrom" 
-                  type="date" 
-                  value-format="YYYY-MM-DD"
-                  placeholder="Select start date" 
-                  style="width: 100%" 
-                />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="Valid To" prop="validTo">
-                <el-date-picker 
-                  v-model="ruleForm.validTo" 
-                  type="date" 
-                  value-format="YYYY-MM-DD"
-                  placeholder="Select end date" 
-                  style="width: 100%" 
-                />
-              </el-form-item>
-            </el-col>
-          </el-row>
+          <el-form-item label="Business Type" prop="businessType">
+            <el-input placeholder="Enter business type (BASE/IPI)" v-model.trim="ruleForm.businessType" />
+          </el-form-item>
+
+          <el-form-item label="Container Type" prop="containerType">
+            <el-select v-model="ruleForm.containerType" placeholder="Select Container Type" style="width: 100%">
+              <el-option label="20GP" value="20GP" />
+              <el-option label="40GP" value="40GP" />
+              <el-option label="40HQ" value="40HQ" />
+              <el-option label="45HQ" value="45HQ" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="Route" prop="route">
+            <el-select v-model="ruleForm.route" placeholder="Select Route" style="width: 100%">
+              <el-option label="USEC" value="USEC" />
+              <el-option label="USWC" value="USWC" />
+              <el-option label="USGC" value="USGC" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="POD Type" prop="podType">
+            <el-select v-model="ruleForm.podType" placeholder="Select POD Type" style="width: 100%">
+              <el-option label="REGION" value="REGION" />
+              <el-option label="PORT" value="PORT" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="POD" prop="pod">
+            <el-input placeholder="Enter POD (region/port code/state list)" v-model.trim="ruleForm.pod" />
+          </el-form-item>
+
+          <el-form-item label="DD Type" prop="ddType">
+            <el-select v-model="ruleForm.ddType" placeholder="Select DD Type" style="width: 100%">
+              <el-option label="CONTRACT" value="CONTRACT" />
+              <el-option label="PUBLISHED" value="PUBLISHED" />
+            </el-select>
+          </el-form-item>
 
           <el-form-item label="Remarks" prop="remarks">
             <el-input type="textarea" placeholder="Enter remarks" v-model="ruleForm.remarks" rows="3" />
           </el-form-item>
+
+
 
           <el-form-item label="Status" prop="isValid">
             <el-radio-group v-model="ruleForm.isValid">

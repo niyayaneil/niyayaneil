@@ -59,8 +59,32 @@ const menuItems1 = ref([
   {
     index: '1-16',
     route: '/LclWarehouseFreeTime',
-    icon: 'WarehouseIcon',
+    icon: 'TerminalIcon',
     title: 'LCL Warehouse Free Time',
+  },
+  {
+    index: '1-17',
+    route: '/FclOutsideFreeTime',
+    icon: 'BasePortTTIcon',
+    title: 'FCL Outside Free Time',
+  },
+  {
+    index: '1-18',
+    route: '/FclDndRate',
+    icon: 'FclOverweightRuleIcon',
+    title: 'FCL DND Rate',
+  },
+  {
+    index: '1-19',
+    route: '/FclOriginCharge',
+    icon: 'FclOriginChargeIcon',
+    title: 'FCL Origin Charge',
+  },
+  {
+    index: '1-20',
+    route: '/FclOverweightRule',
+    icon: 'FclOverweightRuleIcon',
+    title: 'FCL Overweight Rule',
   },
   {
     index: '1-1',

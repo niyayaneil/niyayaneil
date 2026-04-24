@@ -7,7 +7,7 @@ import { ElMessage } from 'element-plus'
 
 // 1. 新axios实例，基础配置
 const instance = axios.create({
-  baseURL: import.meta.env.MODE === 'base' ? 'http://localhost:8000' + import.meta.env.VITE_API_URL : import.meta.env.VITE_BASE_URL + import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_BASE_URL + import.meta.env.VITE_API_URL,  // ← 修改这一行
   timeout: 60000
 })
 // 2. 请求拦截器，携带token
@@ -68,12 +68,13 @@ type Data<T> = {
   data: T
 }
 // 4. 请求工具函数
-const request = <T>(url: string, method: Method = 'get', submitData?: object, responseType?: string) => {
+const request = <T>(url: string, method: Method = 'get', submitData?: object, config?: any) => {
   return instance.request<T, Data<T>>({
     url,
     method,
     [method.toLowerCase() === 'get' ? 'params' : 'data']: submitData,
-    responseType: (responseType || 'json') as ResponseType
+    responseType: (config?.responseType || 'json') as ResponseType,
+    ...config
   })
 }
 

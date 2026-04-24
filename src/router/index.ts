@@ -20,6 +20,10 @@ const router = createRouter({
       {        path: 'Truckcompany',        component: () => import('@/views/Truckcompany/Truckcompany.vue'),        meta: { parTitle: 'Sea Data', title: 'TruckCompany' }      },
       {        path: 'Warehouse',        component: () => import('@/views/Warehouse/Warehouse.vue'),        meta: { parTitle: 'Sea Data', title: 'Warehouse' }      },
       {        path: 'LclWarehouseFreeTime',        component: () => import('@/views/LclWarehouseFreeTime/LclWarehouseFreeTime.vue'),        meta: { parTitle: 'Sea Data', title: 'LCL Warehouse Free Time' }      },
+      {        path: 'FclOutsideFreeTime',        component: () => import('@/views/FclOutsideFreeTime/FclOutsideFreeTime.vue'),        meta: { parTitle: 'Sea Data', title: 'FCL Outside Free Time' }      },
+      {        path: 'FclDndRate',        component: () => import('@/views/FclDndRate/FclDndRate.vue'),        meta: { parTitle: 'Sea Data', title: 'FCL DND Rate' }      },
+      {        path: 'FclOriginCharge',        component: () => import('@/views/FclOriginCharge/FclOriginCharge.vue'),        meta: { parTitle: 'Sea Data', title: 'FCL Origin Charge' }      },
+      {        path: 'FclOverweightRule',        component: () => import('@/views/FclOverweightRule/FclOverweightRule.vue'),        meta: { parTitle: 'Sea Data', title: 'FCL Overweight Rule' }      },
       {
         path: 'SupplierManagement',
         component: () => import('@/views/SupplierManagement/SupplierManagement.vue'),

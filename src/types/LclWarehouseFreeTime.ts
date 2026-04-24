@@ -3,9 +3,11 @@ export interface LclWarehouseFreeTimeItem {
   warehouseCode: string
   portCode: string
   serviceProvider: string
-  freeDays: number
+  freeDays: number | undefined
   freeUnit: string
   remarks: string
+  validFrom: string
+  validTo: string
   createTime: string
   createUser: string
   updateTime: string
@@ -19,6 +21,8 @@ export interface LclWarehouseFreeTimeSearchParams {
   warehouseCode?: string
   portCode?: string
   serviceProvider?: string
+  validFrom?: string
+  validTo?: string
   isValid?: number
 }
 

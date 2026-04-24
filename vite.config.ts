@@ -26,10 +26,11 @@ export default defineConfig({
     }),
   ],
   server: {
+    host: '0.0.0.0',   // ← 添加这一行
     port: 8080,
     proxy: {
       ['/dict-service']: {
-        target: 'http://localhost:8000',
+        target: 'http://192.168.17.99:8000',
         ws: false,
         changeOrigin: true,
         rewrite: (path) => path.replace(new RegExp(`^/dict-service`), '/dict-service'),

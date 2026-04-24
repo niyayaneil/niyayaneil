@@ -9,6 +9,20 @@ onMounted(() => {
   getTableList()
 })
 
+const onSearch = () => {
+  form.value.pageNum = 1
+  getTableList()
+}
+const onReset = () => {
+  form.value.iataCode = ''
+  form.value.airlineNameEn = ''
+  form.value.airlineNameCn = ''
+  form.value.unlocode = ''
+  form.value.pageNum = 1
+  form.value.pageSize = 30
+  getTableList()
+}
+
 // 搜索
 const form = ref<AircompanySearchParams>({
   pageNum: 1,
@@ -36,6 +50,7 @@ const handleSortChange = ({ prop, order }) => {
 
 const getTableList = async () => {
   try {
+    loading.value = true
     const response = await getAircompanyList(form.value)
     tableData.value = response.data.list
     total.value = response.data.total
@@ -44,6 +59,8 @@ const getTableList = async () => {
       type: 'error',
       message: 'Failed to get air company list'
     })
+  } finally {
+    loading.value = false
   }
 }
 
@@ -267,28 +284,56 @@ const htmlContent = ref(``)
 <template>
   <div class="mt-[3px]">
     <div class="p-[24px] bg-white">
-      <el-button
-        @click="add"
-        class="flex h-[33px] text-[#fff] mb-[12px] text-[14px] px-4 justify-center items-center gap-6 rounded-[4px] bg-[#2D8AE0]"
-        ><div class="w-[14px] h-[14px] mr-[8px]">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="14"
-            height="14"
-            viewBox="0 0 14 14"
-            fill="none"
-          >
-            <path
-              fill-rule="evenodd"
-              clip-rule="evenodd"
-              d="M7 1.3125C6.75838 1.3125 6.5625 1.50838 6.5625 1.75V6.5625H1.75C1.50838 6.5625 1.3125 6.75838 1.3125 7C1.3125 7.24162 1.50838 7.4375 1.75 7.4375H6.5625V12.25C6.5625 12.4916 6.75838 12.6875 7 12.6875C7.24162 12.6875 7.4375 12.4916 7.4375 12.25V7.4375H12.25C12.4916 7.4375 12.6875 7.24162 12.6875 7C12.6875 6.75838 12.4916 6.5625 12.25 6.5625H7.4375V1.75C7.4375 1.50838 7.24162 1.3125 7 1.3125Z"
-              fill="white"
-            />
-          </svg>
-        </div>
-        New AirCompany</el-button
+      <el-form
+        :inline="true"
+        :model="form"
+        ref="ruleFormRef"
+        class="demo-form-inline"
+        label-position="right"
+        label-width="auto"
       >
+        <el-form-item label="Airline name(EN)" prop="airlineNameEn">
+          <el-input v-model="form.airlineNameEn" placeholder="Input" clearable />
+        </el-form-item>
+        <el-form-item label="Airline name(CN)" prop="airlineNameCn">
+          <el-input v-model="form.airlineNameCn" placeholder="Input" clearable />
+        </el-form-item>
+        <el-form-item label="Airline code" prop="iataCode">
+          <el-input v-model="form.iataCode" placeholder="Input" clearable />
+        </el-form-item>
+        <el-form-item label="UN/LOCODE" prop="unlocode">
+          <el-input v-model="form.unlocode" placeholder="Input" clearable />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="onSearch" class="bg-[#2D8AE0]">Search</el-button>
+          <el-button @click="onReset">Reset</el-button>
+        </el-form-item>
+      </el-form>
+      <div class="flex">
+        <el-button
+          @click="add"
+          class="flex h-[33px] text-[#fff] mb-[12px] text-[14px] px-4 justify-center items-center gap-6 rounded-[4px] bg-[#2D8AE0]"
+          ><div class="w-[14px] h-[14px] mr-[8px]">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+            >
+              <path
+                fill-rule="evenodd"
+                clip-rule="evenodd"
+                d="M7 1.3125C6.75838 1.3125 6.5625 1.50838 6.5625 1.75V6.5625H1.75C1.50838 6.5625 1.3125 6.75838 1.3125 7C1.3125 7.24162 1.50838 7.4375 1.75 7.4375H6.5625V12.25C6.5625 12.4916 6.75838 12.6875 7 12.6875C7.24162 12.6875 7.4375 12.4916 7.4375 12.25V7.4375H12.25C12.4916 7.4375 12.6875 7.24162 12.6875 7C12.6875 6.75838 12.4916 6.5625 12.25 6.5625H7.4375V1.75C7.4375 1.50838 7.24162 1.3125 7 1.3125Z"
+                fill="white"
+              />
+            </svg>
+          </div>
+          New AirCompany</el-button
+        >
+      </div>
       <el-table
+        v-loading="loading"
         :data="tableData"
         style="width: 100%"
         :default-sort="{ prop: orderByField, order: orderSortType }"
@@ -301,7 +346,8 @@ const htmlContent = ref(``)
             <div>{{ indexMethod($index) }}</div>
           </template>
         </el-table-column>
-        <el-table-column prop="airlineNameEn" label="Airline name" min-width="118" show-overflow-tooltip />
+        <el-table-column prop="airlineNameEn" label="Airline name(EN)" min-width="118" show-overflow-tooltip />
+        <el-table-column prop="airlineNameCn" label="Airline name(CN)" min-width="118" show-overflow-tooltip />
         <el-table-column prop="iataCode" label="Airline code" min-width="118" show-overflow-tooltip />
         <el-table-column
           prop="cargowiseCode"

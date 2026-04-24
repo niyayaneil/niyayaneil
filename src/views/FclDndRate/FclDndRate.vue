@@ -2,9 +2,9 @@
 import { onMounted, ref, reactive, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormRules, FormInstance } from 'element-plus'
-import { getLclWarehouseFreeTimeList, addLclWarehouseFreeTimeApi, editLclWarehouseFreeTimeApi, patchLclWarehouseFreeTimeValidApi } from '@/api/LclWarehouseFreeTime'
-import type { LclWarehouseFreeTimeItem, LclWarehouseFreeTimeSearchParams } from '@/types/LclWarehouseFreeTime'
+import { getFclDndRateList, addFclDndRateApi, editFclDndRateApi, patchFclDndRateValidApi } from '@/api/FclDndRate'
 import { getOptionsListApi } from '@/api/Public'
+import type { FclDndRateItem, FclDndRateSearchParams } from '@/types/FclDndRate'
 
 // 缓存相关配置
 const CACHE_KEY = 'port_list_cache'
@@ -47,11 +47,24 @@ const saveToCache = (cacheKey: string, data: { label: string; value: string | nu
   }
 }
 
+const carrierList = ref<{ label: string; value: string | number }[]>([])
+const carrierListValid = ref<{ label: string; value: string | number }[]>([])
+const containerTypeArray = ref<string[]>([])
 const portList = ref<{ label: string; value: string | number }[]>([])
 const portListValid = ref<{ label: string; value: string | number }[]>([])
 
 onMounted(() => {
   getTableList()
+  getOptionsListApi({ carriers: {} }).then((res: any) => {
+    if (res.data.carriers.length > 0) {
+      carrierList.value = res.data.carriers
+    }
+  })
+  getOptionsListApi({ carriers: { isValid: '1' } }).then((res: any) => {
+    if (res.data.carriers.length > 0) {
+      carrierListValid.value = res.data.carriers
+    }
+  })
   // 获取港口列表（带缓存和请求优化）
   if (isCacheValid(CACHE_KEY)) {
     portList.value = getFromCache(CACHE_KEY)
@@ -59,7 +72,7 @@ onMounted(() => {
     // 添加超时和错误处理
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 3000) // 3秒超时
-    
+
     getOptionsListApi({ globalPorts: {} }, { signal: controller.signal })
       .then((res: any) => {
         clearTimeout(timeoutId)
@@ -81,7 +94,7 @@ onMounted(() => {
         }
       })
   }
-  
+
   // 获取有效港口列表（带缓存和请求优化）
   if (isCacheValid(CACHE_VALID_KEY)) {
     portListValid.value = getFromCache(CACHE_VALID_KEY)
@@ -89,7 +102,7 @@ onMounted(() => {
     // 添加超时和错误处理
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 3000) // 3秒超时
-    
+
     getOptionsListApi({ globalPorts: { isValid: '1' } }, { signal: controller.signal })
       .then((res: any) => {
         clearTimeout(timeoutId)
@@ -114,15 +127,15 @@ onMounted(() => {
 })
 
 const onSearch = () => {
-  form.value.pageNum = 1
   getTableList()
 }
 const onReset = () => {
-  form.value.warehouseCode = ''
+  form.value.carrierCode = ''
+  form.value.tradeLane = ''
+  form.value.chargeType = ''
+  form.value.businessType = ''
   form.value.portCode = ''
-  form.value.serviceProvider = ''
-  form.value.validFrom = ''
-  form.value.validTo = ''
+  form.value.containerType = ''
   form.value.isValid = undefined
   form.value.pageNum = 1
   form.value.pageSize = 30
@@ -130,53 +143,30 @@ const onReset = () => {
 }
 
 // 搜索
-const form = ref({
+const form = ref<FclDndRateSearchParams>({
   pageNum: 1,
   pageSize: 30,
-  warehouseCode: '',
+  carrierCode: '',
+  tradeLane: '',
+  chargeType: '',
+  businessType: '',
   portCode: '',
-  serviceProvider: '',
-  validFrom: '',
-  validTo: '',
+  containerType: '',
   isValid: undefined
 })
-const orderByField = ref('updateTime')
-const orderSortType = ref('descending')
 const loading = ref(false)
 const submitLoading = ref(false)
-// 处理排序变化
-const handleSortChange = ({ prop, order }) => {
-  if (!order) {
-    orderByField.value = ''
-    orderSortType.value = ''
-    getTableList()
-  } else {
-    orderByField.value = prop
-    orderSortType.value = order === 'ascending' ? 'asc' : 'desc'
-    getTableList()
-  }
-}
 
 const getTableList = async () => {
   try {
     loading.value = true
-    const params = {
-      pageNum: form.value.pageNum,
-      pageSize: form.value.pageSize,
-      warehouseCode: form.value.warehouseCode,
-      portCode: form.value.portCode,
-      serviceProvider: form.value.serviceProvider,
-      validFrom: form.value.validFrom,
-      validTo: form.value.validTo,
-      isValid: form.value.isValid
-    }
-    const response = await getLclWarehouseFreeTimeList(params)
+    const response = await getFclDndRateList(form.value)
     tableData.value = response.data.list
     total.value = response.data.total
   } catch (error) {
     ElMessage({
       type: 'error',
-      message: 'Failed to get LCL warehouse free time list'
+      message: 'Failed to get FCL DND rate list'
     })
   } finally {
     loading.value = false
@@ -200,18 +190,32 @@ const handlePageNumChange = (val: number) => {
   getTableList()
 }
 
-const tableData = ref<LclWarehouseFreeTimeItem[]>([])
+const tableData = ref<FclDndRateItem[]>([])
 
 // 添加
 const add = () => {
-  titleDialog.value = 'New LCL Warehouse Free Time'
+  titleDialog.value = 'New FCL DND Rate'
   ruleForm.value = {
     id: 0,
-    warehouseCode: '',
+    carrierCode: '',
+    tradeLane: '',
+    chargeType: '',
+    businessType: '',
     portCode: '',
-    serviceProvider: '',
-    freeDays: undefined,
+    containerType: '',
+    freeDays: '',
     freeUnit: '',
+    freeDaysRule: '',
+    specialRule: '',
+    tier1Days: '',
+    tier1Rate: undefined,
+    tier2Days: '',
+    tier2Rate: undefined,
+    tier3Days: '',
+    tier3Rate: undefined,
+    tier4Days: '',
+    tier4Rate: undefined,
+    currency: 'USD',
     remarks: '',
     validFrom: '',
     validTo: '',
@@ -221,20 +225,28 @@ const add = () => {
     updateUser: '',
     isValid: 1
   }
+  // 清空容器类型数组
+  containerTypeArray.value = []
   nextTick(() => {
     ruleFormRef.value?.clearValidate()
   })
   visibleDialog.value = true
 }
 
-const edit = (row: LclWarehouseFreeTimeItem) => {
-  titleDialog.value = 'Edit LCL Warehouse Free Time'
+const edit = (row: FclDndRateItem) => {
+  titleDialog.value = 'Edit FCL DND Rate'
   visibleDialog.value = true
   nextTick(() => {
     for (let key in ruleForm.value) {
       if (row.hasOwnProperty(key)) {
         ruleForm.value[key] = row[key]
       }
+    }
+    // 将逗号分隔的容器类型字符串转换为数组
+    if (row.containerType) {
+      containerTypeArray.value = row.containerType.split(',')
+    } else {
+      containerTypeArray.value = []
     }
   })
 }
@@ -243,38 +255,63 @@ const edit = (row: LclWarehouseFreeTimeItem) => {
 const visibleDialog = ref(false)
 const titleDialog = ref('')
 const ruleFormRef = ref<FormInstance>()
-const rules = reactive<FormRules<LclWarehouseFreeTimeItem>>({
-  warehouseCode: [
+const rules = reactive<FormRules<FclDndRateItem>>({
+  carrierCode: [
     {
       required: true,
       message: 'Required',
       trigger: 'change',
     },
   ],
-  portCode: [
-    {
-      required: true,
-      message: 'Required',
-      trigger: 'change',
-    },
-  ],
-  serviceProvider: [
-    {
-      required: true,
-      message: 'Required',
-      trigger: 'change',
-    },
-  ],
-  freeDays: [
+  tradeLane: [],
+  chargeType: [],
+  businessType: [],
+  portCode: [],
+  containerType: [],
+  freeDays: [],
+  freeUnit: [],
+  freeDaysRule: [],
+  specialRule: [],
+  tier1Days: [],
+  tier1Rate: [
     {
       type: 'number',
       min: 0,
-      message: 'Free days must be non-negative',
+      message: 'Rate must be non-negative',
       trigger: 'change',
     },
   ],
-  freeUnit: [],
+  tier2Days: [],
+  tier2Rate: [
+    {
+      type: 'number',
+      min: 0,
+      message: 'Rate must be non-negative',
+      trigger: 'change',
+    },
+  ],
+  tier3Days: [],
+  tier3Rate: [
+    {
+      type: 'number',
+      min: 0,
+      message: 'Rate must be non-negative',
+      trigger: 'change',
+    },
+  ],
+  tier4Days: [],
+  tier4Rate: [
+    {
+      type: 'number',
+      min: 0,
+      message: 'Rate must be non-negative',
+      trigger: 'change',
+    },
+  ],
+  currency: [],
   remarks: [],
+  validFrom: [],
+  validTo: [],
   isValid: [
     {
       required: true,
@@ -284,13 +321,27 @@ const rules = reactive<FormRules<LclWarehouseFreeTimeItem>>({
   ],
 })
 
-const ruleForm = ref<LclWarehouseFreeTimeItem>({
+const ruleForm = ref<FclDndRateItem>({
   id: 0,
-  warehouseCode: '',
+  carrierCode: '',
+  tradeLane: '',
+  chargeType: '',
+  businessType: '',
   portCode: '',
-  serviceProvider: '',
-  freeDays: undefined,
+  containerType: '',
+  freeDays: '',
   freeUnit: '',
+  freeDaysRule: '',
+  specialRule: '',
+  tier1Days: '',
+  tier1Rate: undefined,
+  tier2Days: '',
+  tier2Rate: undefined,
+  tier3Days: '',
+  tier3Rate: undefined,
+  tier4Days: '',
+  tier4Rate: undefined,
+  currency: 'USD',
   remarks: '',
   validFrom: '',
   validTo: '',
@@ -305,59 +356,82 @@ const submitForm = async (formEl: FormInstance | undefined) => {
   if (!formEl) return
   await formEl.validate((valid, fields) => {
     if (valid) {
-      const formatDate = (dateString: string) => {
+      // 格式化日期时间，返回不带 T 的本地时间格式
+      const formatDateTime = (dateString: string) => {
         if (!dateString) return ''
-        return dateString.split('T')[0]
+        const date = new Date(dateString)
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        const hours = String(date.getHours()).padStart(2, '0')
+        const minutes = String(date.getMinutes()).padStart(2, '0')
+        const seconds = String(date.getSeconds()).padStart(2, '0')
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
       }
+
       const formCopy = {
         id: ruleForm.value.id,
-        warehouseCode: ruleForm.value.warehouseCode,
+        carrierCode: ruleForm.value.carrierCode,
+        tradeLane: ruleForm.value.tradeLane,
+        chargeType: ruleForm.value.chargeType,
+        businessType: ruleForm.value.businessType,
         portCode: ruleForm.value.portCode,
-        serviceProvider: ruleForm.value.serviceProvider,
+        containerType: containerTypeArray.value.join(','),
         freeDays: ruleForm.value.freeDays,
         freeUnit: ruleForm.value.freeUnit,
+        freeDaysRule: ruleForm.value.freeDaysRule,
+        specialRule: ruleForm.value.specialRule,
+        tier1Days: ruleForm.value.tier1Days,
+        tier1Rate: ruleForm.value.tier1Rate,
+        tier2Days: ruleForm.value.tier2Days,
+        tier2Rate: ruleForm.value.tier2Rate,
+        tier3Days: ruleForm.value.tier3Days,
+        tier3Rate: ruleForm.value.tier3Rate,
+        tier4Days: ruleForm.value.tier4Days,
+        tier4Rate: ruleForm.value.tier4Rate,
+        currency: ruleForm.value.currency,
         remarks: ruleForm.value.remarks,
-        validFrom: formatDate(ruleForm.value.validFrom),
-        validTo: formatDate(ruleForm.value.validTo),
+        validFrom: formatDateTime(ruleForm.value.validFrom),
+        validTo: formatDateTime(ruleForm.value.validTo),
         isValid: ruleForm.value.isValid
       }
-      if (titleDialog.value === 'New LCL Warehouse Free Time') {
+      if (titleDialog.value === 'New FCL DND Rate') {
         delete (formCopy as any).id
         submitLoading.value = true
-        addLclWarehouseFreeTimeApi(formCopy).then((res) => {
+        addFclDndRateApi(formCopy).then((res) => {
           if (res.code === 200) {
             getTableList()
             closeDialog()
             ElMessage({
               type: 'success',
-              message: 'LCL warehouse free time added successfully',
+              message: 'FCL DND rate added successfully',
             })
           }
         }).catch((err) => {
           console.error('Add failed:', err)
           ElMessage({
             type: 'error',
-            message: 'Failed to add LCL warehouse free time'
+            message: 'Failed to add FCL DND rate'
           })
         }).finally(() => {
           submitLoading.value = false
         })
       } else {
         submitLoading.value = true
-        editLclWarehouseFreeTimeApi(formCopy).then((res) => {
+        editFclDndRateApi(formCopy).then((res) => {
           if (res.code === 200) {
             getTableList()
             closeDialog()
             ElMessage({
               type: 'success',
-              message: 'LCL warehouse free time updated successfully',
+              message: 'FCL DND rate updated successfully',
             })
           }
         }).catch((err) => {
           console.error('Edit failed:', err)
           ElMessage({
             type: 'error',
-            message: 'Failed to edit LCL warehouse free time'
+            message: 'Failed to edit FCL DND rate'
           })
         }).finally(() => {
           submitLoading.value = false
@@ -377,9 +451,9 @@ const closeDialog = () => {
 }
 
 // 状态切换
-const handleStatusChange = async (row: LclWarehouseFreeTimeItem, newValue: number) => {
+const handleStatusChange = async (row: FclDndRateItem, newValue: number) => {
   const originalValue = newValue === 1 ? 0 : 1
-  
+
   ElMessageBox.confirm('Please confirm this operation', 'Warning', {
     confirmButtonText: 'OK',
     cancelButtonText: 'Cancel',
@@ -387,7 +461,7 @@ const handleStatusChange = async (row: LclWarehouseFreeTimeItem, newValue: numbe
   })
     .then(async () => {
       try {
-        await patchLclWarehouseFreeTimeValidApi(row.id, newValue)
+        await patchFclDndRateValidApi(row.id, newValue)
         ElMessage({ type: 'success', message: 'Status updated successfully' })
         getTableList()
       } catch (error) {
@@ -415,8 +489,55 @@ const htmlContent = ref(``)
         label-position="right"
         label-width="auto"
       >
-        <el-form-item label="Warehouse code" prop="warehouseCode">
-          <el-input v-model="form.warehouseCode" placeholder="Input" clearable />
+        <el-form-item label="Carrie" prop="carrierCode">
+          <el-select v-model="form.carrierCode" filterable placeholder="Select Carrier Code" clearable style="width: 150px">
+            <el-option
+              v-for="item in carrierList"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            >
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Trade Lane" prop="tradeLane">
+          <el-select v-model="form.tradeLane" clearable placeholder="Select Trade Lane" style="width: 150px">
+            <el-option label="US" value="US" />
+            <el-option label="CA" value="CA" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Charge Type" prop="chargeType">
+          <el-select v-model="form.chargeType" clearable placeholder="Select Charge Type" style="width: 150px">
+            <el-option label="Demurrage" value="Demurrage" />
+            <el-option label="Detention" value="Detention" />
+            <el-option label="DND" value="DND" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Business Type" prop="businessType">
+          <el-select v-model="form.businessType" clearable placeholder="Select Business Type" style="width: 150px">
+            <el-option label="BASE" value="BASE" />
+            <el-option label="IPI" value="IPI" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Container Type" prop="containerType">
+          <el-select v-model="form.containerType" clearable placeholder="Select Container Type" style="width: 150px">
+            <el-option label="20GP" value="20GP" />
+            <el-option label="20RF" value="20RF" />
+            <el-option label="20OT" value="20OT" />
+            <el-option label="20FR" value="20FR" />
+            <el-option label="20TK" value="20TK" />
+            <el-option label="20PL" value="20PL" />
+            <el-option label="40GP" value="40GP" />
+            <el-option label="40HQ" value="40HQ" />
+            <el-option label="45HQ" value="45HQ" />
+            <el-option label="40RF" value="40RF" />
+            <el-option label="40RH" value="40RH" />
+            <el-option label="40OT" value="40OT" />
+            <el-option label="40FR" value="40FR" />
+            <el-option label="40TK" value="40TK" />
+            <el-option label="40PL" value="40PL" />
+            <el-option label="53HC" value="53HC" />
+          </el-select>
         </el-form-item>
         <el-form-item label="Port" prop="portCode">
           <el-select v-model="form.portCode" filterable placeholder="Select Port" clearable style="width: 150px" virtual :max-height="300">
@@ -428,29 +549,6 @@ const htmlContent = ref(``)
             >
             </el-option>
           </el-select>
-        </el-form-item>
-        <el-form-item label="Service Provider" prop="serviceProvider">
-          <el-input v-model="form.serviceProvider" placeholder="Input" clearable />
-        </el-form-item>
-        <el-form-item label="Valid From" prop="validFrom">
-          <el-date-picker 
-            v-model="form.validFrom" 
-            type="date" 
-            value-format="YYYY-MM-DD"
-            placeholder="Select start date" 
-            clearable 
-            style="width: 200px" 
-          />
-        </el-form-item>
-        <el-form-item label="Valid To" prop="validTo">
-          <el-date-picker 
-            v-model="form.validTo" 
-            type="date" 
-            value-format="YYYY-MM-DD"
-            placeholder="Select end date" 
-            clearable 
-            style="width: 200px" 
-          />
         </el-form-item>
         <el-form-item label="Status" prop="isValid">
           <el-select v-model="form.isValid" clearable placeholder="Please Select">
@@ -483,49 +581,48 @@ const htmlContent = ref(``)
               />
             </svg>
           </div>
-          New LCL Warehouse Free Time</el-button
+          New FCL DND Rate</el-button
         >
       </div>
-      <el-table
-        v-loading="loading"
-        :data="tableData"
-        style="width: 100%"
-        :default-sort="{ prop: orderByField, order: orderSortType }"
-        @sort-change="handleSortChange"
-        height="calc(100vh - 240px)"
-        stripe
-        empty-text="No data available"
-      >
+      <div style="width: 100%; margin-bottom: 10px;">
+        <div style="overflow-x: auto; width: 100%; scrollbar-width: thin; max-height: calc(100vh - 320px);">
+          <div style="min-width: 3500px;">
+            <el-table
+              v-loading="loading"
+              :data="tableData"
+              style="width: 100%"
+              stripe
+              empty-text="No data available"
+            >
         <el-table-column prop="id" label="#" width="60">
           <template #default="{ $index }">
             <div>{{ indexMethod($index) }}</div>
           </template>
         </el-table-column>
-        <el-table-column prop="warehouseCode" label="Warehouse code" min-width="118" show-overflow-tooltip />
-        <el-table-column prop="portCode" label="Port Code" min-width="118" show-overflow-tooltip />
-        <el-table-column prop="serviceProvider" label="Service Provider" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="carrierCode" label="Carrie" min-width="118" show-overflow-tooltip />
+        <el-table-column prop="tradeLane" label="Trade Lane" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="chargeType" label="Charge Type" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="businessType" label="Business Type" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="portCode" label="Port Code" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="containerType" label="Container Type" min-width="150" show-overflow-tooltip />
         <el-table-column prop="freeDays" label="Free Days" min-width="100" show-overflow-tooltip />
         <el-table-column prop="freeUnit" label="Free Unit" min-width="100" show-overflow-tooltip />
-        <el-table-column prop="remarks" label="Remarks" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="freeDaysRule" label="Free Days Rule" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="specialRule" label="Special Rule" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="tier1Days" label="Tier 1 Days" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="tier1Rate" label="Tier 1 Rate" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="tier2Days" label="Tier 2 Days" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="tier2Rate" label="Tier 2 Rate" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="tier3Days" label="Tier 3 Days" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="tier3Rate" label="Tier 3 Rate" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="tier4Days" label="Tier 4 Days" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="tier4Rate" label="Tier 4 Rate" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="currency" label="Currency" min-width="100" show-overflow-tooltip />
         <el-table-column prop="validFrom" label="Valid From" min-width="150" show-overflow-tooltip />
         <el-table-column prop="validTo" label="Valid To" min-width="150" show-overflow-tooltip />
-        <el-table-column
-          prop="updateUser"
-          label="Updater"
-          width="108"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          prop="updateTime"
-          sortable
-          label="Update Time"
-          width="156"
-          show-overflow-tooltip
-        >
-          <template #default="{ row }">
-            <div>{{ row.updateTime }}</div>
-          </template>
-        </el-table-column>
+        <el-table-column prop="updateUser" label="Updater" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="updateTime" label="Update Time" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="remarks" label="Remarks" min-width="150" show-overflow-tooltip />
 
         <el-table-column prop="isValid" label="Status" width="80">
           <template #default="{ row }">
@@ -570,7 +667,10 @@ const htmlContent = ref(``)
             </div>
           </template>
         </el-table-column>
-      </el-table>
+              </el-table>
+            </div>
+          </div>
+        </div>
       <!-- 分页器 -->
       <div class="mt-[16px] flex items-center gap-4 justify-end">
         <div class="text-[#97989A]">Total {{ total }} Items</div>
@@ -619,8 +719,38 @@ const htmlContent = ref(``)
           label-width="auto"
           class="demo-ruleForm"
         >
-          <el-form-item label="Warehouse code" prop="warehouseCode">
-            <el-input placeholder="Enter warehouse code" v-model.trim="ruleForm.warehouseCode" />
+          <el-form-item label="Carrie" prop="carrierCode">
+            <el-select v-model="ruleForm.carrierCode" filterable placeholder="Select Carrier Code" clearable style="width: 100%">
+              <el-option
+                v-for="item in carrierListValid"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              >
+              </el-option>
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="Trade Lane" prop="tradeLane">
+            <el-select v-model="ruleForm.tradeLane" placeholder="Select Trade Lane" style="width: 100%">
+              <el-option label="US" value="US" />
+              <el-option label="CA" value="CA" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="Charge Type" prop="chargeType">
+            <el-select v-model="ruleForm.chargeType" placeholder="Select Charge Type" style="width: 100%">
+              <el-option label="Demurrage" value="Demurrage" />
+              <el-option label="Detention" value="Detention" />
+              <el-option label="DND" value="DND" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="Business Type" prop="businessType">
+            <el-select v-model="ruleForm.businessType" placeholder="Select Business Type" style="width: 100%">
+              <el-option label="BASE" value="BASE" />
+              <el-option label="IPI" value="IPI" />
+            </el-select>
           </el-form-item>
 
           <el-form-item label="Port" prop="portCode">
@@ -635,46 +765,114 @@ const htmlContent = ref(``)
             </el-select>
           </el-form-item>
 
-          <el-form-item label="Service Provider" prop="serviceProvider">
-            <el-input placeholder="Enter service provider" v-model.trim="ruleForm.serviceProvider" />
+          <el-form-item label="Container Type" prop="containerType">
+            <el-select v-model="containerTypeArray" multiple placeholder="Select Container Type" style="width: 100%">
+              <el-option label="20GP" value="20GP" />
+              <el-option label="20RF" value="20RF" />
+              <el-option label="20OT" value="20OT" />
+              <el-option label="20FR" value="20FR" />
+              <el-option label="20TK" value="20TK" />
+              <el-option label="20PL" value="20PL" />
+              <el-option label="40GP" value="40GP" />
+              <el-option label="40HQ" value="40HQ" />
+              <el-option label="45HQ" value="45HQ" />
+              <el-option label="40RF" value="40RF" />
+              <el-option label="40RH" value="40RH" />
+              <el-option label="40OT" value="40OT" />
+              <el-option label="40FR" value="40FR" />
+              <el-option label="40TK" value="40TK" />
+              <el-option label="40PL" value="40PL" />
+              <el-option label="53HC" value="53HC" />
+            </el-select>
           </el-form-item>
 
           <el-row :gutter="24">
             <el-col :span="12">
               <el-form-item label="Free Days" prop="freeDays">
-                <el-input type="number" placeholder="Enter free days" v-model.number="ruleForm.freeDays" />
+                <el-input placeholder="Enter free days" v-model.trim="ruleForm.freeDays" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="Free Unit" prop="freeUnit">
-                <el-select v-model="ruleForm.freeUnit" placeholder="Select free unit" style="width: 100%">
-                  <el-option label="CD" value="CD" />
-                  <el-option label="WD" value="WD" />
-                </el-select>
+                <el-input placeholder="Enter free unit (WD/CD)" v-model.trim="ruleForm.freeUnit" />
               </el-form-item>
             </el-col>
           </el-row>
 
+          <el-form-item label="Free Days Rule" prop="freeDaysRule">
+            <el-input placeholder="Enter free days rule" v-model.trim="ruleForm.freeDaysRule" />
+          </el-form-item>
+
+          <el-form-item label="Special Rule" prop="specialRule">
+            <el-input placeholder="Enter special rule" v-model.trim="ruleForm.specialRule" />
+          </el-form-item>
+
+          <el-form-item label="Tier 1" prop="tier1Days">
+            <el-row :gutter="24">
+              <el-col :span="12">
+                <el-input placeholder="Enter days (e.g. 1-5)" v-model.trim="ruleForm.tier1Days" />
+              </el-col>
+              <el-col :span="12">
+                <el-input type="number" placeholder="Enter rate" v-model.number="ruleForm.tier1Rate" />
+              </el-col>
+            </el-row>
+          </el-form-item>
+
+          <el-form-item label="Tier 2" prop="tier2Days">
+            <el-row :gutter="24">
+              <el-col :span="12">
+                <el-input placeholder="Enter days (e.g. 6+)" v-model.trim="ruleForm.tier2Days" />
+              </el-col>
+              <el-col :span="12">
+                <el-input type="number" placeholder="Enter rate" v-model.number="ruleForm.tier2Rate" />
+              </el-col>
+            </el-row>
+          </el-form-item>
+
+          <el-form-item label="Tier 3" prop="tier3Days">
+            <el-row :gutter="24">
+              <el-col :span="12">
+                <el-input placeholder="Enter days" v-model.trim="ruleForm.tier3Days" />
+              </el-col>
+              <el-col :span="12">
+                <el-input type="number" placeholder="Enter rate" v-model.number="ruleForm.tier3Rate" />
+              </el-col>
+            </el-row>
+          </el-form-item>
+
+          <el-form-item label="Tier 4" prop="tier4Days">
+            <el-row :gutter="24">
+              <el-col :span="12">
+                <el-input placeholder="Enter days" v-model.trim="ruleForm.tier4Days" />
+              </el-col>
+              <el-col :span="12">
+                <el-input type="number" placeholder="Enter rate" v-model.number="ruleForm.tier4Rate" />
+              </el-col>
+            </el-row>
+          </el-form-item>
+
+          <el-form-item label="Currency" prop="currency">
+            <el-input placeholder="Enter currency" v-model.trim="ruleForm.currency" />
+          </el-form-item>
+
           <el-row :gutter="24">
             <el-col :span="12">
               <el-form-item label="Valid From" prop="validFrom">
-                <el-date-picker 
-                  v-model="ruleForm.validFrom" 
-                  type="date" 
-                  value-format="YYYY-MM-DD"
-                  placeholder="Select start date" 
-                  style="width: 100%" 
+                <el-date-picker
+                  v-model="ruleForm.validFrom"
+                  type="datetime"
+                  placeholder="Select start datetime"
+                  style="width: 100%"
                 />
               </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="Valid To" prop="validTo">
-                <el-date-picker 
-                  v-model="ruleForm.validTo" 
-                  type="date" 
-                  value-format="YYYY-MM-DD"
-                  placeholder="Select end date" 
-                  style="width: 100%" 
+                <el-date-picker
+                  v-model="ruleForm.validTo"
+                  type="datetime"
+                  placeholder="Select end datetime"
+                  style="width: 100%"
                 />
               </el-form-item>
             </el-col>

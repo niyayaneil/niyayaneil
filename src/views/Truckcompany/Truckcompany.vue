@@ -9,6 +9,21 @@ onMounted(() => {
   getTableList()
 })
 
+const onSearch = () => {
+  form.value.pageNum = 1
+  getTableList()
+}
+const onReset = () => {
+  form.value.truckNameEn = ''
+  form.value.truckNameCn = ''
+  form.value.truckCode = ''
+  form.value.unlocode = ''
+  form.value.isValid = undefined
+  form.value.pageNum = 1
+  form.value.pageSize = 30
+  getTableList()
+}
+
 // 搜索
 const form = ref<TruckcompanySearchParams>({
   pageNum: 1,
@@ -257,27 +272,54 @@ const htmlContent = ref(``)
 <template>
   <div class="mt-[3px]">
     <div class="p-[24px] bg-white">
-      <el-button
-        @click="add"
-        class="flex h-[33px] text-[#fff] mb-[12px] text-[14px] px-4 justify-center items-center gap-6 rounded-[4px] bg-[#2D8AE0]"
-        ><div class="w-[14px] h-[14px] mr-[8px]">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="14"
-            height="14"
-            viewBox="0 0 14 14"
-            fill="none"
-          >
-            <path
-              fill-rule="evenodd"
-              clip-rule="evenodd"
-              d="M7 1.3125C6.75838 1.3125 6.5625 1.50838 6.5625 1.75V6.5625H1.75C1.50838 6.5625 1.3125 6.75838 1.3125 7C1.3125 7.24162 1.50838 7.4375 1.75 7.4375H6.5625V12.25C6.5625 12.4916 6.75838 12.6875 7 12.6875C7.24162 12.6875 7.4375 12.4916 7.4375 12.25V7.4375H12.25C12.4916 7.4375 12.6875 7.24162 12.6875 7C12.6875 6.75838 12.4916 6.5625 12.25 6.5625H7.4375V1.75C7.4375 1.50838 7.24162 1.3125 7 1.3125Z"
-              fill="white"
-            />
-          </svg>
-        </div>
-        New TruckCompany</el-button
+      <el-form
+        :inline="true"
+        :model="form"
+        ref="ruleFormRef"
+        class="demo-form-inline"
+        label-position="right"
+        label-width="auto"
       >
+        <el-form-item label="Truck name (EN)" prop="truckNameEn">
+          <el-input v-model="form.truckNameEn" placeholder="Input" clearable />
+        </el-form-item>
+        <el-form-item label="Truck name (CN)" prop="truckNameCn">
+          <el-input v-model="form.truckNameCn" placeholder="Input" clearable />
+        </el-form-item>
+        <el-form-item label="Truck code" prop="truckCode">
+          <el-input v-model="form.truckCode" placeholder="Input" clearable />
+        </el-form-item>
+        <el-form-item label="UN/LOCODE" prop="unlocode">
+          <el-input v-model="form.unlocode" placeholder="Input" clearable />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="onSearch" class="bg-[#2D8AE0]">Search</el-button>
+          <el-button @click="onReset">Reset</el-button>
+        </el-form-item>
+      </el-form>
+      <div class="flex">
+        <el-button
+          @click="add"
+          class="flex h-[33px] text-[#fff] mb-[12px] text-[14px] px-4 justify-center items-center gap-6 rounded-[4px] bg-[#2D8AE0]"
+          ><div class="w-[14px] h-[14px] mr-[8px]">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+            >
+              <path
+                fill-rule="evenodd"
+                clip-rule="evenodd"
+                d="M7 1.3125C6.75838 1.3125 6.5625 1.50838 6.5625 1.75V6.5625H1.75C1.50838 6.5625 1.3125 6.75838 1.3125 7C1.3125 7.24162 1.50838 7.4375 1.75 7.4375H6.5625V12.25C6.5625 12.4916 6.75838 12.6875 7 12.6875C7.24162 12.6875 7.4375 12.4916 7.4375 12.25V7.4375H12.25C12.4916 7.4375 12.6875 7.24162 12.6875 7C12.6875 6.75838 12.4916 6.5625 12.25 6.5625H7.4375V1.75C7.4375 1.50838 7.24162 1.3125 7 1.3125Z"
+                fill="white"
+              />
+            </svg>
+          </div>
+          New TruckCompany</el-button
+        >
+      </div>
       <el-table
         v-loading="loading"
         :data="tableData"
